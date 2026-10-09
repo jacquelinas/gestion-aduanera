@@ -1,24 +1,18 @@
 import { CompanySettings, CustomsSettlement } from './types';
+import { DEFAULT_CORPORATE_LOGO_DATA_URI } from './utils/logoRenderer';
 
-export const DEFAULT_CORPORATE_LOGO_DATA_URI =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <rect width="120" height="120" rx="20" fill="#0f172a"/>
-  <rect x="8" y="8" width="104" height="104" rx="14" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-opacity="0.45"/>
-  <path d="M28 84V36h13l19 29 19-29h13v48H79V55L62 80h-4L41 55v29H28z" fill="#ffffff"/>
-  <path d="M28 93h64" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
-</svg>`);
+export { DEFAULT_CORPORATE_LOGO_DATA_URI };
 
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
-  name: 'MERIDIAN ESTUDIO ADUANERO & LOGÍSTICA S.A.',
+  name: 'LG ESTUDIO ADUANERO & LOGÍSTICA S.A.',
   slogan: 'Despachos de Importación y Exportación · Logística Internacional',
-  ruc: '80094512-4',
-  phone: '+595 21 614 8900 / +595 981 442 100',
-  email: 'operaciones@meridianaduanas.com.py',
-  address: 'Av. Aviadores del Chaco 2050, World Trade Center, Torre 3, Piso 11 — Asunción',
-  logoText: 'MC',
+  ruc: '80144425-0',
+  phone: '+595 981 412 775 / +595 981 593 088',
+  email: 'operaciones@logisticaaduanera.com.py',
+  address: 'Asunción — República del Paraguay',
+  logoText: 'LG',
   logoUrl: DEFAULT_CORPORATE_LOGO_DATA_URI,
-  bankDetails: 'Banco Itaú Paraguay S.A. · Cta. Cte. Gs. Nº 700148293 · Cta. Cte. USD Nº 700148301 · RUC: 80094512-4',
+  bankDetails: 'LG Estudio Aduanero & Logística S.A. · RUC: 80144425-0 · Cta. Cte. Gs. / USD',
 };
 
 export const INITIAL_SETTLEMENT: CustomsSettlement = {

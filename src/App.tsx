@@ -46,10 +46,10 @@ import { SectionTooltip } from './components/SectionTooltip';
 type ActiveView = 'liquidacion' | 'documento' | 'historial' | 'empresa';
 
 const STORAGE_KEYS = {
-  COMPANY: 'meridian_customs_company_v3',
-  HISTORY: 'meridian_customs_history_v3',
-  CURRENT: 'meridian_customs_current_v3',
-  ONBOARDING_DISMISSED: 'meridian_customs_onboarding_v3',
+  COMPANY: 'meridian_customs_company_v4',
+  HISTORY: 'meridian_customs_history_v4',
+  CURRENT: 'meridian_customs_current_v4',
+  ONBOARDING_DISMISSED: 'meridian_customs_onboarding_v4',
 };
 
 function computeNextSequential(list: CustomsSettlement[], year = 2026): string {
@@ -828,7 +828,7 @@ export default function App() {
                 }
                 alt={`Logo ${company.name}`}
                 referrerPolicy="no-referrer"
-                className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-slate-900 p-1 shrink-0"
+                className="w-24 h-14 rounded-md object-contain border border-slate-300 bg-white p-1 shrink-0"
               />
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -2275,14 +2275,14 @@ export default function App() {
                         }
                         alt={`Logo ${company.name}`}
                         referrerPolicy="no-referrer"
-                        className="w-16 h-16 rounded-xl object-contain border border-slate-300 bg-slate-900 p-1 shrink-0"
+                        className="w-28 h-16 rounded-md object-contain border border-slate-300 bg-white p-1 shrink-0"
                       />
                       <div>
                         <div className="font-semibold text-slate-900 text-xs">
                           Vista Previa del Logo Corporativo (PDF, HTML e Impresión)
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Suba el logo de su empresa (PNG/JPG) o utilice el emblema automático con sus siglas.
+                          Suba el logo de su empresa (PNG/JPG) o utilice el logo oficial LG Logística Aduanera por defecto.
                         </p>
                       </div>
                     </div>
@@ -2303,20 +2303,22 @@ export default function App() {
                               const img = new Image();
                               img.onload = () => {
                                 const canvas = document.createElement('canvas');
-                                canvas.width = 320;
-                                canvas.height = 320;
+                                canvas.width = 640;
+                                canvas.height = 360;
                                 const ctx = canvas.getContext('2d');
                                 if (ctx) {
+                                  ctx.fillStyle = '#ffffff';
+                                  ctx.fillRect(0, 0, 640, 360);
                                   const ratio = Math.min(
-                                    320 / img.width,
-                                    320 / img.height
+                                    640 / img.width,
+                                    360 / img.height
                                   );
                                   const w = img.width * ratio;
                                   const h = img.height * ratio;
                                   ctx.drawImage(
                                     img,
-                                    (320 - w) / 2,
-                                    (320 - h) / 2,
+                                    (640 - w) / 2,
+                                    (360 - h) / 2,
                                     w,
                                     h
                                   );

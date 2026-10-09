@@ -45,12 +45,17 @@ export function exportSettlementToPdf(
       ? company.logoUrl
       : renderCorporateLogoPngDataUrl(company.logoText, company.name);
 
-  // 1. DATOS DE LA EMPRESA (Logo Gráfico + Datos Corporativos + Secuencial)
+  const borderGray: [number, number, number] = [100, 116, 139]; // Slate-500 crisp frame
+  const headerFill: [number, number, number] = [241, 245, 249]; // Light gray #f1f5f9
+  const subHeaderFill: [number, number, number] = [248, 250, 252]; // Very light gray #f8fafc
+  const blackText: [number, number, number] = [15, 23, 42]; // Crisp black/slate-900
+
+  // 1. DATOS DE LA EMPRESA (Fondo Blanco Encuadrado + Logo LG + Texto Negro)
   const companyBlockText = [
     company.name,
+    `RUC: ${company.ruc}`,
     company.slogan,
-    `${company.address}  |  Tel: ${company.phone}`,
-    `RUC Empresa: ${company.ruc}  |  Email: ${company.email}`,
+    `${company.phone}  ·  ${company.email}`,
   ].join('\n');
 
   const sequentialBlockText = [
@@ -63,44 +68,51 @@ export function exportSettlementToPdf(
     startY: y,
     margin: { left: margin, right: margin },
     pageBreak: 'avoid',
-    theme: 'plain',
+    theme: 'grid',
     styles: {
-      fillColor: [15, 23, 42],
-      textColor: [255, 255, 255],
-      cellPadding: Math.max(1.8, 2.4 * scale),
+      fillColor: [255, 255, 255],
+      textColor: blackText,
+      lineColor: borderGray,
+      lineWidth: 0.25,
+      cellPadding: Math.max(1.8, 2.3 * scale),
       valign: 'middle',
       overflow: 'linebreak',
       minCellHeight: 19,
     },
     columnStyles: {
-      0: { cellWidth: 21, halign: 'center', valign: 'middle' },
+      0: { cellWidth: 34, halign: 'center', valign: 'middle' },
       1: {
-        cellWidth: 118,
+        cellWidth: 108,
         halign: 'left',
-        fontSize: Math.max(6.2, 7.3 * scale),
-        textColor: [241, 245, 249],
+        fontSize: Math.max(6.4, 7.4 * scale),
+        fontStyle: 'bold',
+        textColor: blackText,
       },
       2: {
-        cellWidth: 55,
+        cellWidth: 52,
         halign: 'right',
         fontSize: Math.max(6.6, 7.8 * scale),
         fontStyle: 'bold',
-        textColor: [255, 255, 255],
+        fillColor: headerFill,
+        textColor: blackText,
       },
     },
     body: [['', companyBlockText, sequentialBlockText]],
-    didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 2) {
-        data.cell.styles.fillColor = [30, 41, 59];
-      }
-    },
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 0 && logoPngDataUrl) {
         try {
-          const imgSize = Math.min(data.cell.width - 3, data.cell.height - 3, 16.5);
-          const imgX = data.cell.x + (data.cell.width - imgSize) / 2;
-          const imgY = data.cell.y + (data.cell.height - imgSize) / 2;
-          doc.addImage(logoPngDataUrl, 'PNG', imgX, imgY, imgSize, imgSize);
+          const maxW = data.cell.width - 3;
+          const maxH = data.cell.height - 2.5;
+          // Maintain 16:9 aspect ratio for LG logo
+          let imgW = maxW;
+          let imgH = imgW * (360 / 640);
+          if (imgH > maxH) {
+            imgH = maxH;
+            imgW = imgH * (640 / 360);
+          }
+          const imgX = data.cell.x + (data.cell.width - imgW) / 2;
+          const imgY = data.cell.y + (data.cell.height - imgH) / 2;
+          doc.addImage(logoPngDataUrl, 'PNG', imgX, imgY, imgW, imgH);
         } catch {
           // fallback
         }
@@ -112,22 +124,27 @@ export function exportSettlementToPdf(
     (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
       .finalY + gap;
 
-  // 2. CUATRO COLUMNAS: Datos del Cliente | Despacho | Datos Liquidación | Contenido
+  // 2. CUATRO COLUMNAS ENCUADRADAS: Datos del Cliente | Despacho | Datos Liquidación | Contenido
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     pageBreak: 'avoid',
     theme: 'grid',
+    styles: {
+      lineColor: borderGray,
+      lineWidth: 0.25,
+    },
     headStyles: {
-      fillColor: [241, 245, 249],
-      textColor: [15, 23, 42],
+      fillColor: headerFill,
+      textColor: blackText,
       fontSize: Math.max(6.2, 7.0 * scale),
       fontStyle: 'bold',
       cellPadding: Math.max(1.0, 1.4 * scale),
     },
     bodyStyles: {
+      fillColor: [255, 255, 255],
       fontSize: Math.max(5.8, 6.6 * scale),
-      textColor: [30, 41, 59],
+      textColor: blackText,
       cellPadding: Math.max(1.0, 1.5 * scale),
       overflow: 'linebreak',
       valign: 'top',
@@ -136,7 +153,7 @@ export function exportSettlementToPdf(
       0: { cellWidth: 49 },
       1: { cellWidth: 49 },
       2: { cellWidth: 45 },
-      3: { cellWidth: 51 },
+      3: { cellWidth: 51, fillColor: subHeaderFill },
     },
     head: [
       ['Datos del Cliente', 'Despacho', 'Datos Liquidación', 'Contenido'],
@@ -155,7 +172,7 @@ export function exportSettlementToPdf(
     (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
       .finalY + gap;
 
-  // 3. LIQUIDACIÓN DE DERECHOS Y GASTOS SOBRE MERCADERÍA A SER TRANSPORTADA (6 Columnas)
+  // 3. LIQUIDACIÓN DE DERECHOS Y GASTOS SOBRE MERCADERÍA A SER TRANSPORTADA (6 Columnas Encuadradas)
   const merchItems =
     settlement.merchandiseItems && settlement.merchandiseItems.length > 0
       ? settlement.merchandiseItems
@@ -176,16 +193,21 @@ export function exportSettlementToPdf(
     margin: { left: margin, right: margin },
     pageBreak: 'avoid',
     theme: 'grid',
+    styles: {
+      lineColor: borderGray,
+      lineWidth: 0.25,
+    },
     headStyles: {
-      fillColor: [15, 23, 42],
-      textColor: [255, 255, 255],
+      fillColor: headerFill,
+      textColor: blackText,
       fontSize: Math.max(6.0, 6.8 * scale),
       fontStyle: 'bold',
       cellPadding: Math.max(0.9, 1.3 * scale),
     },
     bodyStyles: {
+      fillColor: [255, 255, 255],
       fontSize: Math.max(5.8, 6.6 * scale),
-      textColor: [15, 23, 42],
+      textColor: blackText,
       cellPadding: Math.max(0.9, 1.3 * scale),
       overflow: 'linebreak',
     },
@@ -203,16 +225,24 @@ export function exportSettlementToPdf(
           content:
             'Liquidación de Derechos y Gastos Sobre Mercadería a ser Transportada',
           colSpan: 6,
-          styles: { halign: 'left', fillColor: [15, 23, 42] },
+          styles: {
+            halign: 'left',
+            fillColor: headerFill,
+            textColor: blackText,
+            fontStyle: 'bold',
+          },
         },
       ],
       [
-        'Bultos',
-        'Unidad Medida',
-        'Descripción',
-        'Part Arancel',
-        'Valor',
-        'Porc. Arancelaria %',
+        { content: 'Bultos', styles: { fillColor: subHeaderFill } },
+        { content: 'Unidad Medida', styles: { fillColor: subHeaderFill } },
+        { content: 'Descripción', styles: { fillColor: subHeaderFill } },
+        { content: 'Part Arancel', styles: { fillColor: subHeaderFill } },
+        { content: 'Valor', styles: { fillColor: subHeaderFill, halign: 'right' } },
+        {
+          content: 'Porc. Arancelaria %',
+          styles: { fillColor: subHeaderFill, halign: 'right' },
+        },
       ],
     ],
     body: merchItems.map((m) => [
@@ -229,7 +259,7 @@ export function exportSettlementToPdf(
     (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
       .finalY + gap;
 
-  // 4. SECCIONES DE 3 COLUMNAS: Descripción | Datos Adicionales | Valor
+  // 4. SECCIONES DE 3 COLUMNAS ENCUADRADAS (Fondo Claro + Texto Negro + Bordes Definidos)
   const renderThreeColTable = (
     mainTitle: string,
     subTitle: string | null,
@@ -273,16 +303,21 @@ export function exportSettlementToPdf(
       margin: { left: margin, right: margin },
       pageBreak: 'avoid',
       theme: 'grid',
+      styles: {
+        lineColor: borderGray,
+        lineWidth: 0.25,
+      },
       headStyles: {
-        fillColor: [30, 41, 59],
-        textColor: [255, 255, 255],
+        fillColor: headerFill,
+        textColor: blackText,
         fontSize: Math.max(6.0, 6.8 * scale),
         fontStyle: 'bold',
         cellPadding: Math.max(0.9, 1.2 * scale),
       },
       bodyStyles: {
+        fillColor: [255, 255, 255],
         fontSize: Math.max(5.8, 6.6 * scale),
-        textColor: [30, 41, 59],
+        textColor: blackText,
         cellPadding: Math.max(0.8, 1.15 * scale),
         overflow: 'linebreak',
       },
@@ -296,10 +331,21 @@ export function exportSettlementToPdf(
           {
             content: headerTitle,
             colSpan: 3,
-            styles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+            styles: {
+              fillColor: headerFill,
+              textColor: blackText,
+              fontStyle: 'bold',
+            },
           },
         ],
-        ['Descripción', 'Datos Adicionales', 'Valor'],
+        [
+          { content: 'Descripción', styles: { fillColor: subHeaderFill } },
+          { content: 'Datos Adicionales', styles: { fillColor: subHeaderFill } },
+          {
+            content: 'Valor',
+            styles: { fillColor: subHeaderFill, halign: 'right' },
+          },
+        ],
       ],
       body: rows,
       didParseCell: (data) => {
@@ -307,19 +353,15 @@ export function exportSettlementToPdf(
           const itemCount = Math.max(1, items.length);
           if (data.row.index >= itemCount) {
             data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.textColor = blackText;
             if (data.column.index === 1) {
               data.cell.styles.halign = 'right';
             }
-            // Highlight Total General row
-            if (
-              includeGrandSummary &&
-              data.row.index === itemCount + 1
-            ) {
-              data.cell.styles.fillColor = [15, 23, 42];
-              data.cell.styles.textColor = [255, 255, 255];
+            if (includeGrandSummary && data.row.index === itemCount + 1) {
+              // Total General: light gray highlight with bold black text
+              data.cell.styles.fillColor = [226, 232, 240];
             } else {
-              data.cell.styles.fillColor = [241, 245, 249];
-              data.cell.styles.textColor = [15, 23, 42];
+              data.cell.styles.fillColor = subHeaderFill;
             }
           }
         }
@@ -355,17 +397,21 @@ export function exportSettlementToPdf(
     true
   );
 
-  // 5. MONTO EN LETRAS, OBSERVACIÓN Y FIRMAS
+  // 5. MONTO EN LETRAS Y OBSERVACIÓN (Encuadrados en Fondo Claro)
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     pageBreak: 'avoid',
     theme: 'grid',
+    styles: {
+      lineColor: borderGray,
+      lineWidth: 0.25,
+    },
     bodyStyles: {
       fontSize: Math.max(6.0, 6.8 * scale),
-      textColor: [15, 23, 42],
+      textColor: blackText,
       cellPadding: Math.max(1.2, 1.8 * scale),
-      fillColor: [248, 250, 252],
+      fillColor: [255, 255, 255],
       overflow: 'linebreak',
     },
     columnStyles: {
@@ -378,6 +424,7 @@ export function exportSettlementToPdf(
     didParseCell: (data) => {
       if (data.section === 'body' && data.row.index === 0) {
         data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = subHeaderFill;
       }
     },
   });
