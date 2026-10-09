@@ -1,0 +1,6 @@
+{
+  "name": "Meridian Customs & Logistics",
+  "description": "Sistema profesional de liquidación de gastos de despacho aduanero, cálculo de tributos, historial de operaciones y generación de documentos listos para impresión y PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

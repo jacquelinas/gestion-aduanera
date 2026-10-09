@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono, .tabular-nums {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .print-container {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin: 0 !important;
+    padding: 4mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 284mm !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-compact-header {
+    padding-bottom: 2.5mm !important;
+    margin-bottom: 2.5mm !important;
+    gap: 3mm !important;
+  }
+
+  .print-compact-grid {
+    margin-top: 2mm !important;
+    margin-bottom: 2.5mm !important;
+    gap: 2.5mm !important;
+  }
+
+  .print-compact-card {
+    padding: 2mm 2.5mm !important;
+  }
+
+  .print-compact-strip {
+    padding: 2mm 3mm !important;
+    margin-bottom: 2.5mm !important;
+    gap: 2mm !important;
+  }
+
+  .print-compact-sections {
+    margin-bottom: 2.5mm !important;
+  }
+
+  .print-compact-sections > * + * {
+    margin-top: 2mm !important;
+  }
+
+  .print-compact-table th,
+  .print-compact-table td {
+    padding-top: 0.9mm !important;
+    padding-bottom: 0.9mm !important;
+    padding-left: 2mm !important;
+    padding-right: 2mm !important;
+    font-size: 9.5px !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-compact-footer {
+    padding-top: 2.5mm !important;
+    gap: 3mm !important;
+  }
+
+  .print-compact-signatures {
+    padding-top: 4mm !important;
+  }
+}
