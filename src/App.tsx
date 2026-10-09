@@ -814,52 +814,68 @@ export default function App() {
           )}
 
           {/* Sub-toolbar with Quick Search, Sequential Generator, and Company Identity Strip */}
-          <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Company Identity Preview */}
-            <div className="flex items-center gap-3.5">
-              <img
-                src={
-                  company.logoUrl && company.logoUrl.trim() !== ''
-                    ? company.logoUrl
-                    : renderCorporateLogoPngDataUrl(
-                        company.logoText,
-                        company.name
-                      )
-                }
-                alt={`Logo ${company.name}`}
-                referrerPolicy="no-referrer"
-                className="w-24 h-14 rounded-md object-contain border border-slate-300 bg-white p-1 shrink-0"
-              />
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-sm font-bold text-slate-900">
+          <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 overflow-hidden">
+            {/* Company Identity Preview — Stacked on mobile so text never clips or overflows */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 min-w-0 w-full lg:w-auto">
+              <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                <img
+                  src={
+                    company.logoUrl && company.logoUrl.trim() !== ''
+                      ? company.logoUrl
+                      : renderCorporateLogoPngDataUrl(
+                          company.logoText,
+                          company.name
+                        )
+                  }
+                  alt={`Logo ${company.name}`}
+                  referrerPolicy="no-referrer"
+                  className="w-24 h-14 rounded-md object-contain border border-slate-300 bg-white p-1 shrink-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => setActiveView('empresa')}
+                  className="sm:hidden px-2.5 py-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors shrink-0 cursor-pointer"
+                >
+                  Editar empresa
+                </button>
+              </div>
+
+              <div className="min-w-0 w-full flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+                  <h1 className="text-sm font-bold text-slate-900 break-words leading-snug">
                     {company.name}
                   </h1>
-                  <span className="text-slate-300" aria-hidden="true">
+                  <span className="hidden sm:inline text-slate-300" aria-hidden="true">
                     ·
                   </span>
-                  <span className="text-xs font-mono tabular-nums text-slate-600">
+                  <span className="text-xs font-mono tabular-nums font-semibold text-slate-700">
                     RUC {company.ruc}
                   </span>
                   <button
                     type="button"
                     onClick={() => setActiveView('empresa')}
-                    className="text-[11px] font-medium text-blue-600 hover:underline cursor-pointer"
+                    className="hidden sm:inline text-[11px] font-medium text-blue-600 hover:underline cursor-pointer"
                     title="Personalizar Nombre, Logo, Slogan, Teléfono y Correo del Estudio"
                   >
                     Editar datos empresa
                   </button>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {company.slogan} · {company.phone} · {company.email}
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed break-words">
+                  <span>{company.slogan}</span>
+                  {' · '}
+                  <span className="font-mono tabular-nums">{company.phone}</span>
+                  {' · '}
+                  <span className="break-all sm:break-normal text-slate-700 font-medium">
+                    {company.email}
+                  </span>
                 </p>
               </div>
             </div>
 
             {/* Quick Search Bar & Action Controls */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <div
-                className="relative flex-1 sm:w-72"
+                className="relative w-full sm:w-72"
                 title="Busque al instante cualquier liquidación anterior por nombre de cliente, RUC, número de despacho o factura"
               >
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -878,14 +894,14 @@ export default function App() {
                   }}
                   placeholder="Buscar por cliente, RUC, despacho..."
                   aria-label="Buscar liquidaciones previas"
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
+                  className="w-full pl-8 pr-3 py-2 sm:py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
                 />
               </div>
 
               <button
                 type="button"
                 onClick={handleGenerateSequential}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 text-xs font-semibold text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer flex-1 sm:flex-initial"
                 title="Asigna 001/2026 o avanza automáticamente al siguiente número correlativo disponible (ej. 004/2026)"
               >
                 <Hash className="w-3.5 h-3.5 text-blue-700" />
@@ -895,7 +911,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleNewSettlement}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer flex-1 sm:flex-initial"
                 title="Limpia el formulario y asigna automáticamente el siguiente número de liquidación secuencial"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
@@ -905,7 +921,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleExportStandaloneHtml}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer w-full sm:w-auto"
                 title="Descarga un archivo HTML único e interactivo listo para enviar o abrir sin conexión"
               >
                 <Download className="w-3.5 h-3.5 text-blue-600" />
@@ -1363,10 +1379,10 @@ export default function App() {
 
                 {/* Section B: Liquidación de Derechos y Gastos Sobre Mercadería a ser Transportada (6 Columnas) */}
                 <section className="bg-white border border-slate-200 rounded-lg overflow-visible">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3.5 bg-slate-900 text-white rounded-t-lg">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <h3 className="text-sm font-semibold tracking-tight text-white">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 py-3.5 bg-slate-900 text-white rounded-t-lg">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold tracking-tight text-white break-words">
                           Liquidación de Derechos y Gastos Sobre Mercadería a ser Transportada
                         </h3>
                         <SectionTooltip
@@ -1375,7 +1391,7 @@ export default function App() {
                           problemSolved="Permite verificar de un vistazo qué mercadería se está nacionalizando y bajo qué posición arancelaria tributa en el despacho."
                         />
                       </div>
-                      <p className="text-xs text-slate-300 mt-0.5">
+                      <p className="text-xs text-slate-300 mt-0.5 break-words">
                         Bultos · Unidad Medida · Descripción · Part Arancel · Valor · Porc. Arancelaria %
                       </p>
                     </div>
@@ -1389,7 +1405,144 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* MOBILE VIEW (< 768px): Zero-Scroll Stacked Merchandise Cards */}
+                  <div className="md:hidden divide-y divide-slate-200">
+                    {(settlement.merchandiseItems || []).map((m, idx) => (
+                      <div key={m.id} className="p-3.5 space-y-2.5 bg-white">
+                        {/* Row 1: Descripción + Quitar */}
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                              Descripción de Mercadería #{idx + 1}
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMerchandiseRow(m.id)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                              title="Eliminar fila de mercadería"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Quitar</span>
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={m.description}
+                            onChange={(e) =>
+                              handleUpdateMerchandiseRow(
+                                m.id,
+                                'description',
+                                e.target.value
+                              )
+                            }
+                            placeholder="Descripción de la mercadería..."
+                            className="w-full px-3 py-2 text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
+                          />
+                        </div>
+
+                        {/* Row 2: 3-Col Grid (Bultos | Unidad Medida | Porc. Arancel %) */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                              Bultos
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={m.packages || ''}
+                              onChange={(e) =>
+                                handleUpdateMerchandiseRow(
+                                  m.id,
+                                  'packages',
+                                  Number(e.target.value) || 0
+                                )
+                              }
+                              className="w-full px-2.5 py-2 text-xs font-mono tabular-nums font-semibold text-center bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                              Unidad Medida
+                            </label>
+                            <input
+                              type="text"
+                              value={m.unit}
+                              onChange={(e) =>
+                                handleUpdateMerchandiseRow(
+                                  m.id,
+                                  'unit',
+                                  e.target.value
+                                )
+                              }
+                              placeholder="BULTOS"
+                              className="w-full px-2.5 py-2 text-xs font-medium text-center bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-500 mb-1 text-right">
+                              Arancel %
+                            </label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={m.tariffPercent ?? ''}
+                              onChange={(e) =>
+                                handleUpdateMerchandiseRow(
+                                  m.id,
+                                  'tariffPercent',
+                                  Number(e.target.value) || 0
+                                )
+                              }
+                              className="w-full px-2.5 py-2 text-xs font-mono tabular-nums font-semibold text-right bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 3: 2-Col Grid (Part Arancel NCM | Valor Gs.) */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                              Part. Arancelaria
+                            </label>
+                            <input
+                              type="text"
+                              value={m.tariffCode}
+                              onChange={(e) =>
+                                handleUpdateMerchandiseRow(
+                                  m.id,
+                                  'tariffCode',
+                                  e.target.value
+                                )
+                              }
+                              placeholder="8431.49.29"
+                              className="w-full px-2.5 py-2 text-xs font-mono tabular-nums bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-500 mb-1 text-right">
+                              Valor (Gs.)
+                            </label>
+                            <input
+                              type="number"
+                              step="1000"
+                              value={m.valueGs || ''}
+                              onChange={(e) =>
+                                handleUpdateMerchandiseRow(
+                                  m.id,
+                                  'valueGs',
+                                  Number(e.target.value) || 0
+                                )
+                              }
+                              className="w-full px-2.5 py-2 text-xs font-mono tabular-nums font-bold text-right bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP VIEW (>= 768px): 6-Column Table */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50 font-semibold text-slate-600">

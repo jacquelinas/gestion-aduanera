@@ -301,16 +301,17 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             Liquidación de Derechos y Gastos Sobre Mercadería a ser Transportada
           </div>
           <div className="overflow-x-auto">
-            <table className="print-compact-table w-full text-left border-collapse text-[11px] text-slate-950">
+            <table className="print-compact-table w-full text-left border-collapse text-[10px] sm:text-[11px] text-slate-950">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-400 text-[10px] font-bold text-slate-950 divide-x divide-slate-300">
-                  <th className="py-1 px-2.5 text-center w-16">Bultos</th>
-                  <th className="py-1 px-2.5 text-center w-28">Unidad Medida</th>
-                  <th className="py-1 px-2.5">Descripción</th>
-                  <th className="py-1 px-2.5 text-center w-28">Part Arancel</th>
-                  <th className="py-1 px-2.5 text-right w-32">Valor</th>
-                  <th className="py-1 px-2.5 text-right w-32">
-                    Porc. Arancelaria %
+                <tr className="bg-slate-50 border-b border-slate-400 text-[9.5px] sm:text-[10px] font-bold text-slate-950 divide-x divide-slate-300">
+                  <th className="py-1 px-1.5 sm:px-2.5 text-center w-12 sm:w-16">Bultos</th>
+                  <th className="py-1 px-1.5 sm:px-2.5 text-center w-16 sm:w-28">Unid.</th>
+                  <th className="py-1 px-1.5 sm:px-2.5">Descripción</th>
+                  <th className="py-1 px-1.5 sm:px-2.5 text-center w-20 sm:w-28">Part Arancel</th>
+                  <th className="py-1 px-1.5 sm:px-2.5 text-right w-22 sm:w-32">Valor</th>
+                  <th className="py-1 px-1.5 sm:px-2.5 text-right w-14 sm:w-32">
+                    <span className="sm:hidden">Aranc. %</span>
+                    <span className="hidden sm:inline">Porc. Arancelaria %</span>
                   </th>
                 </tr>
               </thead>
@@ -330,22 +331,22 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
                 ) : (
                   settlement.merchandiseItems.map((m) => (
                     <tr key={m.id} className="divide-x divide-slate-300">
-                      <td className="py-1 px-2.5 text-center font-mono tabular-nums font-semibold">
+                      <td className="py-1 px-1.5 sm:px-2.5 text-center font-mono tabular-nums font-semibold">
                         {m.packages}
                       </td>
-                      <td className="py-1 px-2.5 text-center font-medium">
+                      <td className="py-1 px-1.5 sm:px-2.5 text-center font-medium">
                         {m.unit}
                       </td>
-                      <td className="py-1 px-2.5 font-semibold text-slate-950">
+                      <td className="py-1 px-1.5 sm:px-2.5 font-semibold text-slate-950 break-words">
                         {m.description}
                       </td>
-                      <td className="py-1 px-2.5 text-center font-mono tabular-nums">
+                      <td className="py-1 px-1.5 sm:px-2.5 text-center font-mono tabular-nums">
                         {m.tariffCode}
                       </td>
-                      <td className="py-1 px-2.5 text-right font-mono tabular-nums font-bold">
+                      <td className="py-1 px-1.5 sm:px-2.5 text-right font-mono tabular-nums font-bold">
                         {formatCurrencyGs(m.valueGs)}
                       </td>
-                      <td className="py-1 px-2.5 text-right font-mono tabular-nums">
+                      <td className="py-1 px-1.5 sm:px-2.5 text-right font-mono tabular-nums">
                         {m.tariffPercent}%
                       </td>
                     </tr>
@@ -366,24 +367,24 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
                 Liquidación De Despacho
               </span>
             </div>
-            <table className="print-compact-table w-full text-left border-collapse text-[11px] text-slate-950">
+            <table className="print-compact-table w-full text-left border-collapse text-[10.5px] sm:text-[11px] text-slate-950">
               <thead>
                 <tr className="border-b border-slate-400 text-[10px] font-bold text-slate-950 bg-slate-50 divide-x divide-slate-300">
-                  <th className="py-1 px-3">Descripción</th>
-                  <th className="py-1 px-3 w-56">Datos Adicionales</th>
-                  <th className="py-1 px-3 w-40 text-right">Valor</th>
+                  <th className="py-1 px-2 sm:px-3">Descripción</th>
+                  <th className="py-1 px-2 sm:px-3 w-28 sm:w-56">Datos Adicionales</th>
+                  <th className="py-1 px-2 sm:px-3 w-24 sm:w-40 text-right">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
                 {settlement.customsDuties.map((item) => (
                   <tr key={item.id} className="divide-x divide-slate-300">
-                    <td className="py-1 px-3 font-medium text-slate-950">
+                    <td className="py-1 px-2 sm:px-3 font-medium text-slate-950 break-words">
                       {item.description}
                     </td>
-                    <td className="py-1 px-3 font-mono tabular-nums text-slate-800">
+                    <td className="py-1 px-2 sm:px-3 font-mono tabular-nums text-slate-800 break-all sm:break-normal">
                       {item.documentRef || 'S/ DESPACHO'}
                     </td>
-                    <td className="py-1 px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
+                    <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
                       {formatCurrencyGs(item.amountGs)}
                     </td>
                   </tr>
@@ -391,10 +392,10 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
               </tbody>
               <tfoot>
                 <tr className="bg-slate-100 border-t border-slate-400 font-bold text-slate-950 divide-x divide-slate-300">
-                  <td colSpan={2} className="py-1 px-3 text-right">
+                  <td colSpan={2} className="py-1 px-2 sm:px-3 text-right">
                     Total:
                   </td>
-                  <td className="py-1 px-3 text-right font-mono tabular-nums">
+                  <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums">
                     {formatCurrencyGs(metrics.totalDutiesGs)}
                   </td>
                 </tr>
@@ -407,24 +408,24 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             <div className="bg-slate-100 border-b border-slate-400 text-slate-950 px-3 py-1 text-[10.5px] font-bold">
               DETALLE DE TASAS Y OTROS COSTOS
             </div>
-            <table className="print-compact-table w-full text-left border-collapse text-[11px] text-slate-950">
+            <table className="print-compact-table w-full text-left border-collapse text-[10.5px] sm:text-[11px] text-slate-950">
               <thead>
                 <tr className="border-b border-slate-400 text-[10px] font-bold text-slate-950 bg-slate-50 divide-x divide-slate-300">
-                  <th className="py-1 px-3">Descripción</th>
-                  <th className="py-1 px-3 w-56">Datos Adicionales</th>
-                  <th className="py-1 px-3 w-40 text-right">Valor</th>
+                  <th className="py-1 px-2 sm:px-3">Descripción</th>
+                  <th className="py-1 px-2 sm:px-3 w-28 sm:w-56">Datos Adicionales</th>
+                  <th className="py-1 px-2 sm:px-3 w-24 sm:w-40 text-right">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
                 {settlement.ratesAndCosts.map((item) => (
                   <tr key={item.id} className="divide-x divide-slate-300">
-                    <td className="py-1 px-3 font-medium text-slate-950">
+                    <td className="py-1 px-2 sm:px-3 font-medium text-slate-950 break-words">
                       {item.description}
                     </td>
-                    <td className="py-1 px-3 font-mono tabular-nums text-slate-800">
+                    <td className="py-1 px-2 sm:px-3 font-mono tabular-nums text-slate-800 break-all sm:break-normal">
                       {item.documentRef || '—'}
                     </td>
-                    <td className="py-1 px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
+                    <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
                       {formatCurrencyGs(item.amountGs)}
                     </td>
                   </tr>
@@ -432,10 +433,10 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
               </tbody>
               <tfoot>
                 <tr className="bg-slate-100 border-t border-slate-400 font-bold text-slate-950 divide-x divide-slate-300">
-                  <td colSpan={2} className="py-1 px-3 text-right">
+                  <td colSpan={2} className="py-1 px-2 sm:px-3 text-right">
                     Total:
                   </td>
-                  <td className="py-1 px-3 text-right font-mono tabular-nums">
+                  <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums">
                     {formatCurrencyGs(metrics.totalRatesGs)}
                   </td>
                 </tr>
@@ -448,24 +449,24 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             <div className="bg-slate-100 border-b border-slate-400 text-slate-950 px-3 py-1 text-[10.5px] font-bold">
               DETALLE DE SERVICIOS INTERNOS
             </div>
-            <table className="print-compact-table w-full text-left border-collapse text-[11px] text-slate-950">
+            <table className="print-compact-table w-full text-left border-collapse text-[10.5px] sm:text-[11px] text-slate-950">
               <thead>
                 <tr className="border-b border-slate-400 text-[10px] font-bold text-slate-950 bg-slate-50 divide-x divide-slate-300">
-                  <th className="py-1 px-3">Descripción</th>
-                  <th className="py-1 px-3 w-56">Datos Adicionales</th>
-                  <th className="py-1 px-3 w-40 text-right">Valor</th>
+                  <th className="py-1 px-2 sm:px-3">Descripción</th>
+                  <th className="py-1 px-2 sm:px-3 w-28 sm:w-56">Datos Adicionales</th>
+                  <th className="py-1 px-2 sm:px-3 w-24 sm:w-40 text-right">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
                 {settlement.internalServices.map((item) => (
                   <tr key={item.id} className="divide-x divide-slate-300">
-                    <td className="py-1 px-3 font-medium text-slate-950">
+                    <td className="py-1 px-2 sm:px-3 font-medium text-slate-950 break-words">
                       {item.description}
                     </td>
-                    <td className="py-1 px-3 font-mono tabular-nums text-slate-800">
+                    <td className="py-1 px-2 sm:px-3 font-mono tabular-nums text-slate-800 break-all sm:break-normal">
                       {item.documentRef || ''}
                     </td>
-                    <td className="py-1 px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
+                    <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
                       {formatCurrencyGs(item.amountGs)}
                     </td>
                   </tr>
