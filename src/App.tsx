@@ -21,6 +21,8 @@ import {
   Plus,
   Eye,
   CheckCircle2,
+  FileSpreadsheet,
+  Edit,
 } from 'lucide-react';
 import {
   CompanySettings,
@@ -42,6 +44,7 @@ import {
   generateStandaloneInteractiveHtml,
 } from './utils/formatters';
 import { exportSettlementToPdf } from './utils/pdfExporter';
+import { exportSettlementToExcel } from './utils/excelExporter';
 import { renderCorporateLogoPngDataUrl } from './utils/logoRenderer';
 import { DynamicExpenseTable } from './components/DynamicExpenseTable';
 import { ReceivedPaymentsTable } from './components/ReceivedPaymentsTable';
@@ -2471,6 +2474,10 @@ export default function App() {
                 const fileName = exportSettlementToPdf(settlement, company);
                 showNotice(`Archivo PDF descargado: ${fileName}`);
               }}
+              onExportExcelFile={() => {
+                const fileName = exportSettlementToExcel(settlement, company);
+                showNotice(`Archivo Excel (.xlsx) estructurado descargado: ${fileName}`);
+              }}
               onMarkAsSent={() => handleSaveToHistory('Enviada', true)}
             />
           )}
@@ -3001,30 +3008,48 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const fileName = exportSettlementToPdf(previewSettlement, company);
-                    showNotice(`PDF descargado exitosamente: ${fileName}`);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors cursor-pointer shadow-xs"
-                  title="Descargar esta liquidación en formato PDF de 1 sola hoja"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Descargar PDF</span>
-                </button>
+                {/* [Editar Datos] */}
                 <button
                   type="button"
                   onClick={() => {
                     handleLoadSettlement(previewSettlement);
                     setPreviewSettlement(null);
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
-                  title="Cargar esta liquidación en el editor para realizar modificaciones"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 rounded-md transition-colors cursor-pointer shadow-2xs"
+                  title="Abre el formulario de edición de campos y rubros"
                 >
-                  <FolderOpen className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Editar</span>
+                  <Edit className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="hidden sm:inline">Editar Datos</span>
                 </button>
+
+                {/* [Descargar PDF] */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fileName = exportSettlementToPdf(previewSettlement, company);
+                    showNotice(`PDF descargado exitosamente: ${fileName}`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors cursor-pointer shadow-xs"
+                  title="Genera el documento A4 formateado"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Descargar PDF</span>
+                </button>
+
+                {/* [Descargar Excel (.xlsx)] */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fileName = exportSettlementToExcel(previewSettlement, company);
+                    showNotice(`Excel estructurado descargado: ${fileName}`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 rounded-md transition-colors cursor-pointer shadow-xs"
+                  title="Dispara la descarga inmediata del archivo de Excel estructurado (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                  <span className="hidden sm:inline">Descargar Excel (.xlsx)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -3061,6 +3086,19 @@ export default function App() {
                     settlement={previewSettlement}
                     company={company}
                     isStandaloneView={false}
+                    showTopActionBar={false}
+                    onBackToEditor={() => {
+                      handleLoadSettlement(previewSettlement);
+                      setPreviewSettlement(null);
+                    }}
+                    onExportPdfFile={() => {
+                      const fileName = exportSettlementToPdf(previewSettlement, company);
+                      showNotice(`PDF descargado exitosamente: ${fileName}`);
+                    }}
+                    onExportExcelFile={() => {
+                      const fileName = exportSettlementToExcel(previewSettlement, company);
+                      showNotice(`Excel estructurado descargado: ${fileName}`);
+                    }}
                   />
                 </div>
               </div>

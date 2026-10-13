@@ -1,5 +1,14 @@
 import React from 'react';
-import { Printer, Download, ArrowLeft, CheckCircle2, FileDown } from 'lucide-react';
+import {
+  Printer,
+  Download,
+  ArrowLeft,
+  CheckCircle2,
+  FileDown,
+  FileSpreadsheet,
+  FileText,
+  Edit,
+} from 'lucide-react';
 import { CompanySettings, CustomsSettlement } from '../types';
 import {
   calculateSettlementMetrics,
@@ -8,6 +17,8 @@ import {
   formatCurrencyAmount,
 } from '../utils/formatters';
 import { renderCorporateLogoPngDataUrl } from '../utils/logoRenderer';
+import { exportSettlementToPdf } from '../utils/pdfExporter';
+import { exportSettlementToExcel } from '../utils/excelExporter';
 
 interface PrintInvoiceDocumentProps {
   settlement: CustomsSettlement;
@@ -15,8 +26,10 @@ interface PrintInvoiceDocumentProps {
   onBackToEditor?: () => void;
   onExportStandaloneHtml?: () => void;
   onExportPdfFile?: () => void;
+  onExportExcelFile?: () => void;
   onMarkAsSent?: () => void;
   isStandaloneView?: boolean;
+  showTopActionBar?: boolean;
 }
 
 export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
@@ -25,8 +38,10 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
   onBackToEditor,
   onExportStandaloneHtml,
   onExportPdfFile,
+  onExportExcelFile,
   onMarkAsSent,
   isStandaloneView = false,
+  showTopActionBar = false,
 }) => {
   const metrics = calculateSettlementMetrics(settlement);
   const effectiveLogoSrc =
@@ -38,24 +53,43 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
     window.print();
   };
 
+  const handleDownloadPdf = () => {
+    if (onExportPdfFile) {
+      onExportPdfFile();
+    } else {
+      exportSettlementToPdf(settlement, company);
+    }
+  };
+
+  const handleDownloadExcel = () => {
+    if (onExportExcelFile) {
+      onExportExcelFile();
+    } else {
+      exportSettlementToExcel(settlement, company);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Action Toolbar (Hidden in print) */}
-      {isStandaloneView && (
-        <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white text-slate-900 px-4 sm:px-5 py-3.5 rounded-lg border border-slate-300 shadow-xs">
+      {/* BARRA DE ACCIONES EN LA PARTE SUPERIOR DE LA VISTA PREVIA */}
+      {(isStandaloneView || showTopActionBar) && (
+        <div className="no-print flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white text-slate-900 px-4 sm:px-5 py-3.5 rounded-lg border border-slate-300 shadow-xs">
           <div className="flex flex-wrap items-center gap-3">
             {onBackToEditor && (
               <button
                 type="button"
                 onClick={onBackToEditor}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-2xs"
+                title="Abre el formulario de edición de campos y rubros"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Volver al Editor</span>
+                <Edit className="w-3.5 h-3.5 text-blue-600" />
+                <span>Editar Datos</span>
               </button>
             )}
-            <div className="text-xs text-slate-700">
-              <span className="font-medium">Documento Oficial Encuadrado (1 Hoja A4)</span>
+            <div className="text-xs text-slate-700 hidden sm:block">
+              <span className="font-semibold text-slate-900">
+                Documento Oficial Encuadrado (1 Hoja A4)
+              </span>
               <span className="mx-2 text-slate-400">·</span>
               <span className="font-mono tabular-nums text-slate-950 font-bold">
                 Liquidación Nº {settlement.sequentialNumber}
@@ -74,29 +108,62 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
                 <span>Registrar Envío</span>
               </button>
             )}
+
+            {/* [Editar Datos] (Si no se muestra a la izquierda en vista modal) */}
+            {!onBackToEditor && (
+              <button
+                type="button"
+                onClick={onBackToEditor}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-2xs"
+                title="Abre el formulario de edición de campos y rubros"
+              >
+                <Edit className="w-3.5 h-3.5 text-blue-600" />
+                <span>Editar Datos</span>
+              </button>
+            )}
+
+            {/* [Descargar PDF] */}
             <button
               type="button"
-              onClick={onExportStandaloneHtml}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              onClick={handleDownloadPdf}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
+              title="Genera el documento A4 formateado"
             >
-              <Download className="w-3.5 h-3.5 text-blue-600" />
-              <span>HTML Único</span>
+              <FileText className="w-3.5 h-3.5" />
+              <span>Descargar PDF</span>
             </button>
+
+            {/* [Descargar Excel (.xlsx)] */}
+            <button
+              type="button"
+              onClick={handleDownloadExcel}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
+              title="Dispara la descarga inmediata del archivo de Excel estructurado (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Descargar Excel (.xlsx)</span>
+            </button>
+
+            {onExportStandaloneHtml && (
+              <button
+                type="button"
+                onClick={onExportStandaloneHtml}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                title="Descargar archivo HTML interactivo"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">HTML Único</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handlePrint}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title="Imprimir documento oficial en 1 sola hoja A4"
             >
               <Printer className="w-3.5 h-3.5 text-slate-700" />
-              <span>Imprimir (1 Hoja)</span>
-            </button>
-            <button
-              type="button"
-              onClick={onExportPdfFile}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <FileDown className="w-3.5 h-3.5" />
-              <span>Descargar PDF (1 Hoja)</span>
+              <span>Imprimir</span>
             </button>
           </div>
         </div>

@@ -7,7 +7,7 @@ export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   name: 'LG ESTUDIO ADUANERO & LOGÍSTICA S.A.',
   slogan: 'Despachos de Importación y Exportación · Logística Internacional',
   ruc: '80144425-0',
-  phone: '+595 981 412 775 / +595 981 593 088',
+  phone: '+595981412775 / +595 981 593 088',
   email: 'operaciones@logisticaaduanera.com.py',
   address: 'Asunción — República del Paraguay',
   logoText: 'LG',

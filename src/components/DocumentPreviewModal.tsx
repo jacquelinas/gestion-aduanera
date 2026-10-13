@@ -8,10 +8,13 @@ import {
   Eye,
   CheckCircle2,
   FileText,
+  FileSpreadsheet,
+  Edit,
 } from 'lucide-react';
 import { CompanySettings, CustomsSettlement } from '../types';
 import { PrintInvoiceDocument } from './PrintInvoiceDocument';
 import { exportSettlementToPdf } from '../utils/pdfExporter';
+import { exportSettlementToExcel } from '../utils/excelExporter';
 import { generateStandaloneInteractiveHtml } from '../utils/formatters';
 
 interface DocumentPreviewModalProps {
@@ -47,6 +50,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const handleDownloadPdf = () => {
     const fileName = exportSettlementToPdf(settlement, company);
     onShowNotice(`PDF descargado con éxito: ${fileName}`);
+  };
+
+  const handleDownloadExcel = () => {
+    const fileName = exportSettlementToExcel(settlement, company);
+    onShowNotice(`Excel descargado con éxito: ${fileName}`);
   };
 
   const handleDownloadHtml = () => {
@@ -122,24 +130,37 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
           {/* Quick Action Buttons in Modal Header */}
           <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            {/* [Editar Datos] */}
+            <button
+              type="button"
+              onClick={handleLoadAndClose}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 rounded-md transition-colors cursor-pointer shadow-2xs"
+              title="Abre el formulario de edición de campos y rubros"
+            >
+              <Edit className="w-3.5 h-3.5 text-sky-400" />
+              <span>Editar Datos</span>
+            </button>
+
+            {/* [Descargar PDF] */}
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors cursor-pointer shadow-xs"
-              title="Descargar este archivo en formato PDF"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors cursor-pointer shadow-xs"
+              title="Genera el documento A4 formateado"
             >
-              <FileDown className="w-3.5 h-3.5" />
+              <FileText className="w-3.5 h-3.5" />
               <span>Descargar PDF</span>
             </button>
 
+            {/* [Descargar Excel (.xlsx)] */}
             <button
               type="button"
-              onClick={handleDownloadHtml}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
-              title="Descargar archivo HTML interactivo"
+              onClick={handleDownloadExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 rounded-md transition-colors cursor-pointer shadow-xs"
+              title="Dispara la descarga inmediata del archivo de Excel estructurado (.xlsx)"
             >
-              <FileText className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden sm:inline">HTML</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Descargar Excel (.xlsx)</span>
             </button>
 
             <button
@@ -154,12 +175,12 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
             <button
               type="button"
-              onClick={handleLoadAndClose}
+              onClick={handleDownloadHtml}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
-              title="Cargar esta liquidación en el editor principal"
+              title="Descargar archivo HTML interactivo"
             >
-              <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Editar</span>
+              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <span className="hidden sm:inline">HTML</span>
             </button>
 
             <button
@@ -181,8 +202,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               settlement={settlement}
               company={company}
               isStandaloneView={false}
+              showTopActionBar={false}
+              onBackToEditor={handleLoadAndClose}
               onExportStandaloneHtml={handleDownloadHtml}
               onExportPdfFile={handleDownloadPdf}
+              onExportExcelFile={handleDownloadExcel}
             />
           </div>
         </div>

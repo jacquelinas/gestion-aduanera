@@ -39,6 +39,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CompanySettings, CustomsSettlement } from '../types';
 import { calculateSettlementMetrics } from '../utils/formatters';
+import { exportToExcel } from '../utils/excelExporter';
 
 // ==========================================
 // 📋 MODELO DE DATOS Y TIPOS (TypeScript)
@@ -2882,17 +2883,58 @@ export const DashboardSettlements: React.FC<DashboardSettlementsProps> = ({
                       <span>Descargar Extracto Consolidado PDF</span>
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const fName = exportToPDF(modalSettlement, companyInfo);
-                        showToast(`PDF oficial generado: ${fName}`);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg cursor-pointer shadow-xs"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Descargar Reporte Liquidación PDF</span>
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fName = exportToExcel(
+                            {
+                              ref: modalSettlement.numLiquidacion,
+                              facturaNo: modalSettlement.numLiquidacion,
+                              proveedor: modalSettlement.cliente.razonSocial,
+                              aduana: '021 - ZONA FRANCA GLOBAL',
+                              paisOrigen: 'PARAGUAY',
+                              regimen: 'IC04',
+                            },
+                            [
+                              { concept: 'IMPUESTO AL VALOR AGREGADO (I.V.A.)', amount: Math.round(modalSettlement.montoTotalGeneral * 0.42) },
+                              { concept: 'SERVICIO DE VALORACION ADUANERA.', amount: Math.round(modalSettlement.montoTotalGeneral * 0.03) },
+                              { concept: 'INDI', amount: 0 },
+                              { concept: 'DERECHOS ADUANEROS', amount: Math.round(modalSettlement.montoTotalGeneral * 0.18) },
+                              { concept: 'IRE GENERAL 700', amount: Math.round(modalSettlement.montoTotalGeneral * 0.02) },
+                              { concept: 'TASA INTERVENCION ADUANERA', amount: 85000 },
+                              { concept: 'TASAS PORTUARIAS APROX.', amount: 435000 },
+                              { concept: 'SISTEMA INFORMATICO SOFIA.', amount: 155000 },
+                              { concept: 'DINAVISA', amount: 0 },
+                              { concept: 'FLETE INTERNO Y ESTIBADORES', amount: 0 },
+                              { concept: 'GASTOS DESPACHO - FOTOCOPIAS.', amount: 385000 },
+                              { concept: 'HONORARIOS DESPACHANTE (IVA INCLUIDO)', amount: Math.round(modalSettlement.montoTotalGeneral * 0.25) },
+                              { concept: 'CANON INFORMATICO Y TASAS OPERATIVAS', amount: 115000 },
+                            ],
+                            {
+                              title: `${companyInfo.razonSocial} - PROFORMA DE DESPACHO ADUANERO`,
+                            }
+                          );
+                          showToast(`Excel oficial generado: ${fName}`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 rounded-lg cursor-pointer shadow-xs"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>Descargar Excel (.xlsx)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fName = exportToPDF(modalSettlement, companyInfo);
+                          showToast(`PDF oficial generado: ${fName}`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg cursor-pointer shadow-xs"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Descargar Reporte Liquidación PDF</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
