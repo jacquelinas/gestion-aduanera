@@ -5,6 +5,7 @@ import {
   calculateSettlementMetrics,
   formatCurrencyGs,
   formatCurrencyUsd,
+  formatCurrencyAmount,
 } from '../utils/formatters';
 import { renderCorporateLogoPngDataUrl } from '../utils/logoRenderer';
 
@@ -12,8 +13,8 @@ interface PrintInvoiceDocumentProps {
   settlement: CustomsSettlement;
   company: CompanySettings;
   onBackToEditor?: () => void;
-  onExportStandaloneHtml: () => void;
-  onExportPdfFile: () => void;
+  onExportStandaloneHtml?: () => void;
+  onExportPdfFile?: () => void;
   onMarkAsSent?: () => void;
   isStandaloneView?: boolean;
 }
@@ -188,7 +189,7 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             <div className="bg-slate-100 border-b border-slate-400 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider text-slate-950">
               Despacho
             </div>
-            <div className="p-2.5 space-y-0.5 text-slate-950">
+            <div className="p-2.5 space-y-0.5 text-slate-950 text-[10.5px] leading-snug">
               <div>
                 <span className="font-semibold text-slate-700">Despacho Nº:</span>{' '}
                 <strong className="font-mono tabular-nums text-slate-950">
@@ -202,15 +203,42 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">Procedencia:</span>{' '}
-                <span className="text-slate-900">
-                  {settlement.senderCountry || '—'} ({settlement.transportMode})
+                <span className="font-semibold text-slate-700">Régimen:</span>{' '}
+                <span
+                  className="font-mono font-bold text-slate-950 bg-slate-100 px-1 py-0.2 rounded border border-slate-300"
+                  title={settlement.customsRegime ? `Régimen: ${settlement.customsRegime}` : undefined}
+                >
+                  {settlement.customsRegime || 'IC04'}
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">Aduana:</span>{' '}
-                <span className="text-slate-900 break-words">
-                  {settlement.customsOffice || '—'}
+                <span className="font-semibold text-slate-700">Proforma:</span>{' '}
+                <span className="font-mono tabular-nums text-slate-900">
+                  {settlement.proformaNumber || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-700">Origen:</span>{' '}
+                <span className="text-slate-900 font-medium">
+                  {settlement.originCountry || settlement.senderCountry || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-700">Procedencia:</span>{' '}
+                <span className="text-slate-900 font-medium">
+                  {settlement.provenanceCountry || settlement.senderCountry || '—'}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-700">Vía:</span>{' '}
+                <span className="text-slate-900 font-medium">
+                  {settlement.transportMode || 'Marítimo'}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-700">Doc. Transporte:</span>{' '}
+                <span className="font-mono tabular-nums text-slate-900 break-words">
+                  {settlement.senderReference || '—'}
                 </span>
               </div>
             </div>
@@ -221,17 +249,17 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             <div className="bg-slate-100 border-b border-slate-400 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider text-slate-950">
               Datos Liquidación
             </div>
-            <div className="p-2.5 space-y-0.5 text-slate-950">
-              <div className="flex justify-between gap-1">
-                <span className="font-semibold text-slate-700">Liquidación Nº:</span>
-                <strong className="font-mono tabular-nums text-slate-950">
-                  {settlement.sequentialNumber}
-                </strong>
-              </div>
+            <div className="p-2.5 space-y-1 text-slate-950 text-[10.5px]">
               <div className="flex justify-between gap-1">
                 <span className="font-semibold text-slate-700">Fecha:</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-950">
                   {settlement.date}
+                </span>
+              </div>
+              <div className="flex justify-between gap-1">
+                <span className="font-semibold text-slate-700">Proveedor:</span>
+                <span className="font-medium text-slate-950 text-right break-words">
+                  {settlement.supplierName || settlement.senderName || '—'}
                 </span>
               </div>
               <div className="flex justify-between gap-1">
@@ -241,54 +269,72 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
                 </span>
               </div>
               <div className="flex justify-between gap-1">
-                <span className="font-semibold text-slate-700">Nro. Proforma:</span>
-                <span className="font-mono tabular-nums text-slate-900">
-                  {settlement.proformaNumber || '—'}
+                <span className="font-semibold text-slate-700">Condición de venta:</span>
+                <span className="font-mono font-bold text-slate-950 bg-slate-100 px-1 rounded border border-slate-300">
+                  {settlement.incoterm || settlement.saleCondition || 'FOB'}
                 </span>
-              </div>
-              <div className="flex justify-between gap-1">
-                <span className="font-semibold text-slate-700">Cotiz. Dólar:</span>
-                <strong className="font-mono tabular-nums text-slate-950">
-                  Gs. {formatCurrencyGs(settlement.exchangeRate)}
-                </strong>
               </div>
             </div>
           </div>
 
-          {/* Columna 4: Contenido (Valor FOB, Seguro, Flete, Valor Ajust a incluir, CIF) */}
+          {/* Columna 4: Contenido */}
           <div className="print-compact-card flex flex-col bg-slate-50/70">
             <div className="bg-slate-100 border-b border-slate-400 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider text-slate-950">
               Contenido
             </div>
-            <div className="p-2.5 space-y-0.5 text-slate-950">
+            <div className="p-2 space-y-0.5 text-slate-950 text-[10px] sm:text-[10.5px]">
               <div className="flex justify-between gap-1">
-                <span className="font-semibold text-slate-700">Valor FOB:</span>
-                <span className="font-mono tabular-nums font-semibold text-slate-950">
-                  USD {formatCurrencyUsd(metrics.fobUsd)}
-                </span>
+                <span className="font-semibold text-slate-700">Divisa:</span>
+                <strong className="font-mono text-slate-950">
+                  {settlement.currency || 'USD'}
+                </strong>
               </div>
               <div className="flex justify-between gap-1">
-                <span className="font-semibold text-slate-700">Seguro:</span>
+                <span className="font-semibold text-slate-700">Tipo de Cambio:</span>
+                <strong className="font-mono tabular-nums text-slate-950">
+                  Gs. {formatCurrencyGs(settlement.exchangeRate)}
+                </strong>
+              </div>
+              <div className="flex justify-between gap-1">
+                <span className="font-semibold text-slate-700">Valor FC:</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-950">
-                  USD {formatCurrencyUsd(metrics.insuranceUsd)}
+                  {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.fobAmount, settlement.currency || 'USD')}
                 </span>
               </div>
               <div className="flex justify-between gap-1">
                 <span className="font-semibold text-slate-700">Flete:</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-950">
-                  USD {formatCurrencyUsd(metrics.freightUsd)}
+                  {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.freightAmount, settlement.currency || 'USD')}
                 </span>
               </div>
               <div className="flex justify-between gap-1">
-                <span className="font-semibold text-slate-700">Valor Ajust a incluir:</span>
+                <span className="font-semibold text-slate-700">Seguro:</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-950">
-                  USD {formatCurrencyUsd(metrics.adjustmentUsd)}
+                  {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.insuranceAmount, settlement.currency || 'USD')}
                 </span>
               </div>
-              <div className="flex justify-between gap-1 border-t border-slate-400 pt-0.5 mt-0.5 font-bold text-slate-950">
-                <span>CIF (Gs. {formatCurrencyGs(metrics.cifGs)}):</span>
+              <div className="flex justify-between gap-1">
+                <span className="font-semibold text-slate-700">Ajustes a incluir:</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-950">
+                  {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.adjustmentAmount, settlement.currency || 'USD')}
+                </span>
+              </div>
+              <div className="flex justify-between gap-1">
+                <span className="font-semibold text-slate-700">Ajustes a deducir:</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-950">
+                  {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.deductionAmount || 0, settlement.currency || 'USD')}
+                </span>
+              </div>
+              <div className="flex justify-between gap-1 border-t border-slate-300 pt-0.5 mt-0.5 font-semibold text-slate-950">
+                <span>CIF ({settlement.currency || 'USD'}):</span>
                 <span className="font-mono tabular-nums">
-                  USD {formatCurrencyUsd(metrics.cifUsd)}
+                  {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.cifAmount, settlement.currency || 'USD')}
+                </span>
+              </div>
+              <div className="flex justify-between gap-1 font-bold text-slate-950">
+                <span>CIF (Gs.):</span>
+                <span className="font-mono tabular-nums">
+                  Gs. {formatCurrencyGs(metrics.cifGs)}
                 </span>
               </div>
             </div>
@@ -359,10 +405,10 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
 
         {/* 4. SECCIONES DE 3 COLUMNAS ENCUADRADAS (Descripción | Datos Adicionales | Valor) */}
         <div className="print-compact-sections space-y-2.5 mb-3">
-          {/* 4A. DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS — Liquidación De Despacho */}
+          {/* 4A. 01. DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS — Liquidación De Despacho */}
           <div className="border border-slate-400 rounded-sm overflow-hidden bg-white">
             <div className="bg-slate-100 border-b border-slate-400 text-slate-950 px-3 py-1 text-[10.5px] font-bold flex flex-wrap justify-between items-center">
-              <span>DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS</span>
+              <span>01. DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS</span>
               <span className="text-slate-800 font-semibold">
                 Liquidación De Despacho
               </span>
@@ -403,10 +449,10 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             </table>
           </div>
 
-          {/* 4B. DETALLE DE TASAS Y OTROS COSTOS */}
+          {/* 4B. 02. DETALLE DE TASAS Y OTROS COSTOS */}
           <div className="border border-slate-400 rounded-sm overflow-hidden bg-white">
             <div className="bg-slate-100 border-b border-slate-400 text-slate-950 px-3 py-1 text-[10.5px] font-bold">
-              DETALLE DE TASAS Y OTROS COSTOS
+              02. DETALLE DE TASAS Y OTROS COSTOS
             </div>
             <table className="print-compact-table w-full text-left border-collapse text-[10.5px] sm:text-[11px] text-slate-950">
               <thead>
@@ -444,10 +490,10 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
             </table>
           </div>
 
-          {/* 4C. DETALLE DE SERVICIOS INTERNOS + TOTAL GENERAL, RECIBIDO Y SALDO */}
+          {/* 4C. 03. DETALLE DE SERVICIOS INTERNOS + TOTAL GENERAL, RECIBIDO Y SALDO */}
           <div className="border border-slate-400 rounded-sm overflow-hidden bg-white">
             <div className="bg-slate-100 border-b border-slate-400 text-slate-950 px-3 py-1 text-[10.5px] font-bold">
-              DETALLE DE SERVICIOS INTERNOS
+              03. DETALLE DE SERVICIOS INTERNOS
             </div>
             <table className="print-compact-table w-full text-left border-collapse text-[10.5px] sm:text-[11px] text-slate-950">
               <thead>
@@ -508,6 +554,56 @@ export const PrintInvoiceDocument: React.FC<PrintInvoiceDocumentProps> = ({
               </tfoot>
             </table>
           </div>
+
+          {/* 4D. 04. DETALLE DE MONTOS RECIBIDOS */}
+          {settlement.receivedPayments && settlement.receivedPayments.length > 0 && (
+            <div className="border border-slate-400 rounded-sm overflow-hidden bg-white">
+              <div className="bg-slate-100 border-b border-slate-400 text-slate-950 px-3 py-1 text-[10.5px] font-bold">
+                04. DETALLE DE MONTOS RECIBIDOS
+              </div>
+              <table className="print-compact-table w-full text-left border-collapse text-[10.5px] sm:text-[11px] text-slate-950">
+                <thead>
+                  <tr className="border-b border-slate-400 text-[10px] font-bold text-slate-950 bg-slate-50 divide-x divide-slate-300">
+                    <th className="py-1 px-2 sm:px-3 w-28 sm:w-32">Método</th>
+                    <th className="py-1 px-2 sm:px-3">Detalle (Banco y N° Transacción / N° Recibo)</th>
+                    <th className="py-1 px-2 sm:px-3 w-24 sm:w-32">Fecha</th>
+                    <th className="py-1 px-2 sm:px-3 w-24 sm:w-36 text-right">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-300">
+                  {settlement.receivedPayments.map((p) => (
+                    <tr key={p.id} className="divide-x divide-slate-300">
+                      <td className="py-1 px-2 sm:px-3 font-semibold text-slate-900">
+                        {p.method || 'Transferencia'}
+                      </td>
+                      <td className="py-1 px-2 sm:px-3 font-medium text-slate-950 break-words">
+                        {p.description ||
+                          (p.method === 'Efectivo'
+                            ? 'Recibo de Caja Oficial'
+                            : 'Transferencia Bancaria')}
+                      </td>
+                      <td className="py-1 px-2 sm:px-3 font-mono tabular-nums text-slate-800">
+                        {p.date || '—'}
+                      </td>
+                      <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums font-semibold text-slate-950">
+                        {formatCurrencyGs(p.amountGs)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-100 border-t border-slate-400 font-bold text-slate-950 divide-x divide-slate-300">
+                    <td colSpan={3} className="py-1 px-2 sm:px-3 text-right">
+                      Total Recibido:
+                    </td>
+                    <td className="py-1 px-2 sm:px-3 text-right font-mono tabular-nums">
+                      {formatCurrencyGs(metrics.amountReceivedGs)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* 5. MONTO EN LETRAS Y OBSERVACIÓN (Encuadrados con fondo claro y texto negro) */}

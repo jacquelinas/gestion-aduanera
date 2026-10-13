@@ -5,6 +5,7 @@ import {
   calculateSettlementMetrics,
   formatCurrencyGs,
   formatCurrencyUsd,
+  formatCurrencyAmount,
 } from './formatters';
 import { renderCorporateLogoPngDataUrl } from './logoRenderer';
 
@@ -19,12 +20,14 @@ export function exportSettlementToPdf(
   });
 
   const metrics = calculateSettlementMetrics(settlement);
+  const cur = settlement.currency || 'USD';
 
   const totalRowsCount =
     (settlement.merchandiseItems?.length || 1) +
     settlement.customsDuties.length +
     settlement.ratesAndCosts.length +
-    settlement.internalServices.length;
+    settlement.internalServices.length +
+    (settlement.receivedPayments?.length || 0);
 
   // Dynamic density scaling factor so all sections fit cleanly on 1 single A4 page (297mm height)
   const scale =
@@ -161,9 +164,9 @@ export function exportSettlementToPdf(
     body: [
       [
         `Cliente: ${settlement.clientName || '—'}\nRUC: ${settlement.clientRuc || '—'}\nDirección: ${settlement.clientAddress || '—'}\nRef.: ${settlement.clientContact || '—'}`,
-        `Despacho Nº: ${settlement.dispatchNumber || '—'}\nRemitente: ${settlement.senderName || '—'}\nProcedencia: ${settlement.senderCountry || '—'} (${settlement.transportMode})\nAduana: ${settlement.customsOffice || '—'}`,
-        `Liquidación Nº: ${settlement.sequentialNumber}\nFecha: ${settlement.date}\nNro. Factura: ${settlement.invoiceNumber || '—'}\nNro. Proforma: ${settlement.proformaNumber || '—'}\nCotiz. Dólar: Gs. ${formatCurrencyGs(settlement.exchangeRate)}`,
-        `Valor FOB:   USD ${formatCurrencyUsd(metrics.fobUsd)}\nSeguro:       USD ${formatCurrencyUsd(metrics.insuranceUsd)}\nFlete:          USD ${formatCurrencyUsd(metrics.freightUsd)}\nValor Ajust a incluir: USD ${formatCurrencyUsd(metrics.adjustmentUsd)}\n-------------------------------------------\nCIF (USD):   USD ${formatCurrencyUsd(metrics.cifUsd)}\nCIF (Gs.):    Gs. ${formatCurrencyGs(metrics.cifGs)}`,
+        `Despacho Nº: ${settlement.dispatchNumber || '—'}\nRemitente: ${settlement.senderName || '—'}\nRégimen: ${settlement.customsRegime || 'IC04'}\nProforma: ${settlement.proformaNumber || '—'}\nOrigen: ${settlement.originCountry || settlement.senderCountry || '—'}\nProcedencia: ${settlement.provenanceCountry || settlement.senderCountry || '—'}\nVía: ${settlement.transportMode || 'Marítimo'}\nDoc. Transporte: ${settlement.senderReference || '—'}`,
+        `Fecha: ${settlement.date}\nProveedor: ${settlement.supplierName || settlement.senderName || '—'}\nNro. Factura: ${settlement.invoiceNumber || '—'}\nCondición de venta: ${settlement.incoterm || settlement.saleCondition || 'FOB'}`,
+        `Divisa: ${cur}\nTipo de Cambio: Gs. ${formatCurrencyGs(settlement.exchangeRate)}\nValor FC: ${cur} ${formatCurrencyAmount(metrics.fobAmount, cur)}\nFlete: ${cur} ${formatCurrencyAmount(metrics.freightAmount, cur)}\nSeguro: ${cur} ${formatCurrencyAmount(metrics.insuranceAmount, cur)}\nAjustes a incluir: ${cur} ${formatCurrencyAmount(metrics.adjustmentAmount, cur)}\nAjustes a deducir: ${cur} ${formatCurrencyAmount(metrics.deductionAmount || 0, cur)}\nCIF (${cur}): ${cur} ${formatCurrencyAmount(metrics.cifAmount, cur)}\nCIF (Gs.): Gs. ${formatCurrencyGs(metrics.cifGs)}`,
       ],
     ],
   });
@@ -374,7 +377,7 @@ export function exportSettlementToPdf(
   };
 
   renderThreeColTable(
-    'DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS',
+    '01. DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS',
     'Liquidación De Despacho',
     settlement.customsDuties,
     metrics.totalDutiesGs,
@@ -382,7 +385,7 @@ export function exportSettlementToPdf(
   );
 
   renderThreeColTable(
-    'DETALLE DE TASAS Y OTROS COSTOS',
+    '02. DETALLE DE TASAS Y OTROS COSTOS',
     null,
     settlement.ratesAndCosts,
     metrics.totalRatesGs,
@@ -390,12 +393,104 @@ export function exportSettlementToPdf(
   );
 
   renderThreeColTable(
-    'DETALLE DE SERVICIOS INTERNOS',
+    '03. DETALLE DE SERVICIOS INTERNOS',
     null,
     settlement.internalServices,
     metrics.totalServicesGs,
     true
   );
+
+  if (settlement.receivedPayments && settlement.receivedPayments.length > 0) {
+    const paymentRows: string[][] = settlement.receivedPayments.map((p) => [
+      p.method || 'Transferencia',
+      p.description ||
+        (p.method === 'Efectivo'
+          ? 'Recibo de Caja Oficial'
+          : 'Transferencia Bancaria'),
+      p.date || '—',
+      formatCurrencyGs(p.amountGs),
+    ]);
+    paymentRows.push([
+      '',
+      '',
+      'Total Recibido:',
+      formatCurrencyGs(metrics.amountReceivedGs),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      pageBreak: 'avoid',
+      theme: 'grid',
+      styles: {
+        lineColor: borderGray,
+        lineWidth: 0.25,
+      },
+      headStyles: {
+        fillColor: headerFill,
+        textColor: blackText,
+        fontSize: Math.max(6.0, 6.8 * scale),
+        fontStyle: 'bold',
+        cellPadding: Math.max(0.9, 1.2 * scale),
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        fontSize: Math.max(5.8, 6.6 * scale),
+        textColor: blackText,
+        cellPadding: Math.max(0.8, 1.15 * scale),
+        overflow: 'linebreak',
+      },
+      columnStyles: {
+        0: { cellWidth: 32, fontStyle: 'bold' },
+        1: { cellWidth: 84 },
+        2: { cellWidth: 42, halign: 'center' },
+        3: { cellWidth: 36, halign: 'right', fontStyle: 'bold' },
+      },
+      head: [
+        [
+          {
+            content: '04. DETALLE DE MONTOS RECIBIDOS',
+            colSpan: 4,
+            styles: {
+              fillColor: headerFill,
+              textColor: blackText,
+              fontStyle: 'bold',
+            },
+          },
+        ],
+        [
+          { content: 'Método', styles: { fillColor: subHeaderFill } },
+          {
+            content: 'Detalle (Banco y N° Transacción / Recibo)',
+            styles: { fillColor: subHeaderFill },
+          },
+          { content: 'Fecha', styles: { fillColor: subHeaderFill, halign: 'center' } },
+          {
+            content: 'Valor',
+            styles: { fillColor: subHeaderFill, halign: 'right' },
+          },
+        ],
+      ],
+      body: paymentRows,
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          const itemCount = settlement.receivedPayments!.length;
+          if (data.row.index >= itemCount) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.textColor = blackText;
+            if (data.column.index === 2) {
+              data.cell.styles.halign = 'right';
+            }
+            data.cell.styles.fillColor = subHeaderFill;
+          }
+        }
+      },
+    });
+
+    y =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY + gap;
+  }
 
   // 5. MONTO EN LETRAS Y OBSERVACIÓN (Encuadrados en Fondo Claro)
   autoTable(doc, {

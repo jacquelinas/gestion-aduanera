@@ -19,12 +19,15 @@ import {
   X,
   Upload,
   Plus,
+  Eye,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   CompanySettings,
   CustomsSettlement,
   LineItem,
   MerchandiseItem,
+  ReceivedPaymentItem,
 } from './types';
 import {
   DEFAULT_COMPANY_SETTINGS,
@@ -35,15 +38,24 @@ import {
   calculateSettlementMetrics,
   formatCurrencyGs,
   formatCurrencyUsd,
+  formatCurrencyAmount,
   generateStandaloneInteractiveHtml,
 } from './utils/formatters';
 import { exportSettlementToPdf } from './utils/pdfExporter';
 import { renderCorporateLogoPngDataUrl } from './utils/logoRenderer';
 import { DynamicExpenseTable } from './components/DynamicExpenseTable';
+import { ReceivedPaymentsTable } from './components/ReceivedPaymentsTable';
 import { PrintInvoiceDocument } from './components/PrintInvoiceDocument';
 import { SectionTooltip } from './components/SectionTooltip';
+import {
+  CustomsOfficeSelect,
+  CustomsRegimeSelect,
+  IncotermSelect,
+  CountrySelect,
+} from './components/CustomsCatalogSelectors';
+import { DashboardSettlements } from './components/DashboardSettlements';
 
-type ActiveView = 'liquidacion' | 'documento' | 'historial' | 'empresa';
+type ActiveView = 'liquidacion' | 'documento' | 'dashboard' | 'historial' | 'empresa';
 
 const STORAGE_KEYS = {
   COMPANY: 'meridian_customs_company_v4',
@@ -105,6 +117,29 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [previewSettlement, setPreviewSettlement] =
+    useState<CustomsSettlement | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewSettlement) {
+        setPreviewSettlement(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewSettlement]);
+
+  // Lock body scroll when preview modal is open so wheel/touch scrolls the modal
+  useEffect(() => {
+    if (previewSettlement) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [previewSettlement]);
 
   useEffect(() => {
     try {
@@ -167,7 +202,12 @@ export default function App() {
         item.dispatchNumber.toLowerCase().includes(q) ||
         item.invoiceNumber.toLowerCase().includes(q) ||
         item.proformaNumber.toLowerCase().includes(q) ||
-        item.senderName.toLowerCase().includes(q)
+        item.senderName.toLowerCase().includes(q) ||
+        (item.originCountry && item.originCountry.toLowerCase().includes(q)) ||
+        (item.provenanceCountry && item.provenanceCountry.toLowerCase().includes(q)) ||
+        (item.customsOffice && item.customsOffice.toLowerCase().includes(q)) ||
+        (item.customsRegime && item.customsRegime.toLowerCase().includes(q)) ||
+        (item.incoterm && item.incoterm.toLowerCase().includes(q))
       );
     });
   }, [history, searchQuery, statusFilter]);
@@ -276,6 +316,111 @@ export default function App() {
       ...prev,
       [category]: prev[category].filter((row) => row.id !== id),
     }));
+  };
+
+  // 04. Detalle de Montos Recibidos Handlers
+  const handleAddPaymentRow = () => {
+    const newPayment: ReceivedPaymentItem = {
+      id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      method: 'Transferencia',
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      amountGs: 0,
+    };
+    setSettlement((prev) => {
+      const current = prev.receivedPayments || [];
+      const updated = [...current, newPayment];
+      const sum = updated.reduce((s, p) => s + (Number(p.amountGs) || 0), 0);
+      return {
+        ...prev,
+        receivedPayments: updated,
+        amountReceived: sum,
+      };
+    });
+  };
+
+  const handleUpdatePaymentRow = (
+    id: string,
+    field: keyof ReceivedPaymentItem,
+    value: string | number
+  ) => {
+    setSettlement((prev) => {
+      const current = prev.receivedPayments || [];
+      const updated = current.map((p) =>
+        p.id === id ? { ...p, [field]: value } : p
+      );
+      const sum = updated.reduce((s, p) => s + (Number(p.amountGs) || 0), 0);
+      return {
+        ...prev,
+        receivedPayments: updated,
+        amountReceived: sum,
+      };
+    });
+  };
+
+  const handleRemovePaymentRow = (id: string) => {
+    setSettlement((prev) => {
+      const current = prev.receivedPayments || [];
+      const updated = current.filter((p) => p.id !== id);
+      const sum = updated.reduce((s, p) => s + (Number(p.amountGs) || 0), 0);
+      return {
+        ...prev,
+        receivedPayments: updated,
+        amountReceived: sum,
+      };
+    });
+  };
+
+  // Marcar 100% cancelado vinculando la suma de montos recibidos
+  const handleMarkFullPaid = () => {
+    const grandTotal = metrics.grandTotalGs;
+    const current = settlement.receivedPayments || [];
+    if (current.length === 0) {
+      const newPayment: ReceivedPaymentItem = {
+        id: `pay-${Date.now()}`,
+        method: 'Transferencia',
+        description: 'Banco Itaú — Transacción SIPAP #147772927 (Pago Total 100% Cancelado)',
+        date: new Date().toISOString().split('T')[0],
+        amountGs: grandTotal,
+      };
+      setSettlement((prev) => ({
+        ...prev,
+        receivedPayments: [newPayment],
+        amountReceived: grandTotal,
+      }));
+    } else {
+      const currentSum = current.reduce(
+        (s, p) => s + (Number(p.amountGs) || 0),
+        0
+      );
+      const diff = grandTotal - currentSum;
+      if (diff > 0) {
+        const newPayment: ReceivedPaymentItem = {
+          id: `pay-${Date.now()}`,
+          method: 'Transferencia',
+          description: 'Banco Continental — Transacción SIPAP #99418204 (Cancelación de Saldo)',
+          date: new Date().toISOString().split('T')[0],
+          amountGs: diff,
+        };
+        setSettlement((prev) => ({
+          ...prev,
+          receivedPayments: [...current, newPayment],
+          amountReceived: grandTotal,
+        }));
+      } else {
+        const updated = current.map((p, idx) =>
+          idx === 0 ? { ...p, amountGs: grandTotal } : { ...p, amountGs: 0 }
+        );
+        setSettlement((prev) => ({
+          ...prev,
+          receivedPayments: updated,
+          amountReceived: grandTotal,
+        }));
+      }
+    }
+    showNotice(
+      `Liquidación 100% cancelada: Total Gs. ${formatCurrencyGs(grandTotal)}`
+    );
   };
 
   // Recalculate standard customs duties from CIF Gs
@@ -408,14 +553,20 @@ export default function App() {
       clientAddress: '',
       clientContact: '',
       senderName: '',
-      senderCountry: '',
+      senderCountry: 'China',
+      originCountry: 'China',
+      provenanceCountry: 'China',
       senderReference: '',
-      transportMode: 'Terrestre',
-      customsOffice: 'Aduana Terport Villeta (Código 021)',
+      transportMode: 'Marítimo',
+      customsCode: '004',
+      customsOffice: '004 - Villeta',
+      customsRegime: 'IC04',
+      incoterm: 'FOB',
       invoiceNumber: '',
       dispatchNumber: '',
       proformaNumber: '',
       exchangeRate: 7650,
+      currency: 'USD',
       fobUsd: 0,
       insuranceUsd: 0,
       freightUsd: 0,
@@ -533,6 +684,7 @@ export default function App() {
           taxable: false,
         },
       ],
+      receivedPayments: [],
       amountReceived: 0,
       amountInWords: '',
       notes: '',
@@ -633,7 +785,7 @@ export default function App() {
           {company.name.split(' ')[0]} Aduanas & Logística
         </a>
 
-        {/* Zone 2: 4 concise single-line text navigation links */}
+        {/* Zone 2: 5 concise single-line text navigation links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300 shrink-0">
           <button
             type="button"
@@ -656,6 +808,17 @@ export default function App() {
             }`}
           >
             Vista Factura / PDF
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView('dashboard')}
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer border-b-2 ${
+              activeView === 'dashboard'
+                ? 'text-white border-sky-400 font-semibold'
+                : 'border-transparent hover:text-white hover:border-slate-600'
+            }`}
+          >
+            Dashboard
           </button>
           <button
             type="button"
@@ -696,10 +859,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* Mobile Navigation Tabs (4 equal-width columns, zero horizontal scroll) */}
+      {/* Mobile Navigation Tabs (5 equal-width columns, zero horizontal scroll) */}
       <nav
         aria-label="Navegación móvil"
-        className="no-print md:hidden grid grid-cols-4 gap-1 bg-slate-800 text-slate-200 px-2 py-1.5 border-b border-slate-700 w-full"
+        className="no-print md:hidden grid grid-cols-5 gap-1 bg-slate-800 text-slate-200 px-2 py-1.5 border-b border-slate-700 w-full"
       >
         <button
           type="button"
@@ -721,7 +884,18 @@ export default function App() {
               : 'text-slate-300 hover:text-white'
           }`}
         >
-          Factura PDF
+          Factura
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView('dashboard')}
+          className={`py-2 px-1 text-[11px] font-semibold text-center rounded transition-colors truncate ${
+            activeView === 'dashboard'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Dashboard
         </button>
         <button
           type="button"
@@ -732,7 +906,7 @@ export default function App() {
               : 'text-slate-300 hover:text-white'
           }`}
         >
-          Historial ({history.length})
+          Historial
         </button>
         <button
           type="button"
@@ -1137,6 +1311,40 @@ export default function App() {
                             />
                           </div>
                         </div>
+
+                        {/* Parámetros Aduaneros vinculados: Aduana (SOFIA), Régimen (N°/CÓD), Incoterm (CÓD) */}
+                        <div className="pt-2 border-t border-slate-200/80">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                              Parámetros Aduaneros (Aduana · Régimen · Incoterm)
+                            </span>
+                            <span className="text-[10.5px] text-slate-600 hidden sm:inline">
+                              * Pasa el mouse sobre el código en PC para ver descripción completa
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <CustomsOfficeSelect
+                              value={settlement.customsCode || settlement.customsOffice}
+                              onChange={(office) => {
+                                updateField('customsCode', office.code);
+                                updateField('customsOffice', `${office.code} - ${office.name}`);
+                              }}
+                            />
+                            <CustomsRegimeSelect
+                              value={settlement.customsRegime || 'IC04'}
+                              onChange={(regime) => {
+                                updateField('customsRegime', regime.code);
+                              }}
+                            />
+                            <IncotermSelect
+                              value={settlement.incoterm || 'FOB'}
+                              onChange={(incoterm) => {
+                                updateField('incoterm', incoterm.code);
+                                updateField('saleCondition', incoterm.code);
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       {/* Datos del Remitente / Exportador */}
@@ -1146,38 +1354,53 @@ export default function App() {
                             Datos del Remitente / Exportador
                           </h3>
                           <span className="text-[11px] text-slate-400">
-                            Origen de la mercadería
+                            Origen y Procedencia
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="sm:col-span-2">
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
                             <label className="block text-xs font-medium text-slate-600 mb-1">
                               Nombre del Remitente / Proveedor Exterior
                             </label>
                             <input
                               type="text"
                               value={settlement.senderName}
-                              onChange={(e) =>
-                                updateField('senderName', e.target.value)
-                              }
+                              onChange={(e) => {
+                                updateField('senderName', e.target.value);
+                                updateField('supplierName', e.target.value);
+                              }}
                               placeholder="Proveedor / Exportador..."
                               className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
                             />
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
-                              País de Origen
-                            </label>
-                            <input
-                              type="text"
-                              value={settlement.senderCountry}
-                              onChange={(e) =>
-                                updateField('senderCountry', e.target.value)
+                        </div>
+
+                        {/* Origen vs Procedencia (Listas desplegables con principales países socios comerciales con Paraguay) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <CountrySelect
+                            label="País de Origen"
+                            badgeText="Fabricación"
+                            badgeColor="sky"
+                            value={settlement.originCountry || settlement.senderCountry || ''}
+                            onChange={(countryName) => {
+                              updateField('originCountry', countryName);
+                              if (!settlement.senderCountry) {
+                                updateField('senderCountry', countryName);
                               }
-                              placeholder="Ej. China, Brasil..."
-                              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:border-blue-600 focus:outline-none"
-                            />
-                          </div>
+                            }}
+                            placeholder="Ej. China..."
+                          />
+                          <CountrySelect
+                            label="País de Procedencia"
+                            badgeText="Embarque / Tránsito"
+                            badgeColor="amber"
+                            value={settlement.provenanceCountry || settlement.senderCountry || ''}
+                            onChange={(countryName) => {
+                              updateField('provenanceCountry', countryName);
+                              updateField('senderCountry', countryName);
+                            }}
+                            placeholder="Ej. Uruguay..."
+                          />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1219,26 +1442,50 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Row 3: Contenido / Valoración en Aduana (Cotización Dólar, Valor FOB, Seguro, Flete, Valor Ajust a incluir, CIF) */}
+                    {/* Row 3: Contenido / Valoración en Aduana (Moneda, Cotización, Condición de Venta, Valor FC, Flete, Seguro, Ajuste a incluir, Ajuste a deducir, CIF) */}
                     <div className="pt-4 border-t border-slate-200">
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            Contenido y Base Imponible (Cotización · Valor FOB · Seguro · Flete · Valor Ajust a incluir · CIF)
+                            Contenido y Base Imponible (Moneda · Cotización · Condición de Venta · Valor FC · Flete · Seguro · Ajustes a incluir · Ajustes a deducir · CIF)
                           </h3>
                         </div>
                         <span className="text-xs text-slate-500">
                           Fórmula automática:{' '}
                           <strong className="text-slate-700">
-                            CIF = FOB + Seguro + Flete + Ajuste
+                            CIF = Valor FC + Flete + Seguro + Ajustes a incluir - Ajustes a deducir
                           </strong>
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 bg-slate-900 text-white p-4 rounded-lg">
-                        <div title="Tipo de cambio oficial del día en Guaraníes por cada Dólar (USD)">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3 bg-slate-900 text-white p-4 rounded-lg">
+                        {/* 1. Lista desplegable de Divisa */}
+                        <div title="Divisa de la factura comercial y base imponible">
                           <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                            Cotización Dólar
+                            Divisa
+                          </label>
+                          <select
+                            value={settlement.currency || 'USD'}
+                            onChange={(e) => updateField('currency', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
+                          >
+                            <option value="USD">USD — Dólar ($)</option>
+                            <option value="EUR">EUR — Euro (€)</option>
+                            <option value="BRL">BRL — Real (R$)</option>
+                            <option value="PYG">PYG — Guaraní (₲)</option>
+                            <option value="ARS">ARS — Peso Arg. ($)</option>
+                            <option value="CNY">CNY — Yuan (¥)</option>
+                            <option value="GBP">GBP — Libra (£)</option>
+                            <option value="CLP">CLP — Peso Ch. ($)</option>
+                            <option value="UYU">UYU — Peso Urug. ($)</option>
+                            <option value="JPY">JPY — Yen (¥)</option>
+                          </select>
+                        </div>
+
+                        {/* 2. Cotización */}
+                        <div title={`Tipo de cambio oficial del día en Guaraníes por cada unidad de ${settlement.currency || 'USD'}`}>
+                          <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                            Cotización
                           </label>
                           <input
                             type="number"
@@ -1257,9 +1504,37 @@ export default function App() {
                           />
                         </div>
 
-                        <div title="Valor Free On Board en USD">
+                        {/* 3. Condición de Venta */}
+                        <div title="Condición de venta comercial / Incoterm de la transacción">
                           <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                            Valor FOB (USD)
+                            Condición Venta
+                          </label>
+                          <select
+                            value={settlement.saleCondition || settlement.incoterm || 'FOB'}
+                            onChange={(e) => {
+                              updateField('saleCondition', e.target.value);
+                              updateField('incoterm', e.target.value);
+                            }}
+                            className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
+                          >
+                            <option value="FOB">FOB — Free on Board</option>
+                            <option value="CIF">CIF — Cost, Ins. & Freight</option>
+                            <option value="CFR">CFR — Cost & Freight</option>
+                            <option value="FCA">FCA — Free Carrier</option>
+                            <option value="EXW">EXW — Ex Works</option>
+                            <option value="CIP">CIP — Carriage & Ins.</option>
+                            <option value="CPT">CPT — Carriage Paid To</option>
+                            <option value="DAP">DAP — Delivered At Place</option>
+                            <option value="DPU">DPU — Deliv. Unloaded</option>
+                            <option value="DDP">DDP — Deliv. Duty Paid</option>
+                            <option value="FAS">FAS — Along Buque</option>
+                          </select>
+                        </div>
+
+                        {/* 4. Valor FC (en vez de valor FOB) */}
+                        <div title={`Valor de la Factura Comercial (FC) en ${settlement.currency || 'USD'}`}>
+                          <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                            Valor FC
                           </label>
                           <input
                             type="number"
@@ -1268,48 +1543,20 @@ export default function App() {
                             value={
                               settlement.fobUsd === 0 ? '' : settlement.fobUsd
                             }
-                            onChange={(e) =>
-                              updateField(
-                                'fobUsd',
-                                e.target.value === ''
-                                  ? 0
-                                  : Number(e.target.value)
-                              )
-                            }
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : Number(e.target.value);
+                              updateField('fobUsd', val);
+                              updateField('fcUsd', val);
+                            }}
                             placeholder="0.00"
                             className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-bold text-slate-900 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400"
                           />
                         </div>
 
-                        <div title="Prima de seguro internacional de la carga en USD">
+                        {/* 5. Flete */}
+                        <div title={`Costo del flete internacional en ${settlement.currency || 'USD'}`}>
                           <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                            Seguro (USD)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={
-                              settlement.insuranceUsd === 0
-                                ? ''
-                                : settlement.insuranceUsd
-                            }
-                            onChange={(e) =>
-                              updateField(
-                                'insuranceUsd',
-                                e.target.value === ''
-                                  ? 0
-                                  : Number(e.target.value)
-                              )
-                            }
-                            placeholder="0.00"
-                            className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-bold text-slate-900 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                          />
-                        </div>
-
-                        <div title="Costo del flete internacional en USD">
-                          <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                            Flete (USD)
+                            Flete
                           </label>
                           <input
                             type="number"
@@ -1333,9 +1580,37 @@ export default function App() {
                           />
                         </div>
 
-                        <div title="Valor de ajuste aduanero a incluir en la base imponible (USD)">
+                        {/* 6. Seguro */}
+                        <div title={`Prima de seguro internacional de la carga en ${settlement.currency || 'USD'}`}>
                           <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                            Valor Ajust a incluir
+                            Seguro
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={
+                              settlement.insuranceUsd === 0
+                                ? ''
+                                : settlement.insuranceUsd
+                            }
+                            onChange={(e) =>
+                              updateField(
+                                'insuranceUsd',
+                                e.target.value === ''
+                                  ? 0
+                                  : Number(e.target.value)
+                              )
+                            }
+                            placeholder="0.00"
+                            className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-bold text-slate-900 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                          />
+                        </div>
+
+                        {/* 7. Ajuste a incluir */}
+                        <div title={`Valor de ajuste aduanero a incluir en la base imponible en ${settlement.currency || 'USD'}`}>
+                          <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                            Ajuste a incluir
                           </label>
                           <input
                             type="number"
@@ -1358,15 +1633,42 @@ export default function App() {
                           />
                         </div>
 
+                        {/* 8. Ajuste a deducir */}
+                        <div title={`Valor de ajuste aduanero a deducir de la base imponible en ${settlement.currency || 'USD'}`}>
+                          <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                            Ajuste a deducir
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={
+                              !settlement.deductionUsd
+                                ? ''
+                                : settlement.deductionUsd
+                            }
+                            onChange={(e) =>
+                              updateField(
+                                'deductionUsd',
+                                e.target.value === ''
+                                  ? 0
+                                  : Number(e.target.value)
+                              )
+                            }
+                            placeholder="0.00"
+                            className="w-full px-2.5 py-1.5 text-xs font-mono tabular-nums font-bold text-slate-900 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                          />
+                        </div>
+
+                        {/* 9. CIF (Automático) */}
                         <div
                           className="bg-slate-800 border border-slate-700 rounded p-2.5 flex flex-col justify-center"
-                          title="Valor Imponible calculado automáticamente (FOB + Seguro + Flete + Ajuste) en USD y convertido a Guaraníes"
+                          title={`Valor Imponible calculado automáticamente (Valor FC + Flete + Seguro + Ajustes a incluir - Ajustes a deducir) en ${settlement.currency || 'USD'} y convertido a Guaraníes`}
                         >
                           <span className="text-[11px] text-sky-300 font-medium block">
                             CIF (Automático)
                           </span>
                           <span className="font-mono tabular-nums text-sm font-bold text-white block">
-                            USD {formatCurrencyUsd(metrics.cifUsd)}
+                            {settlement.currency || 'USD'} {formatCurrencyAmount(metrics.cifAmount, settlement.currency || 'USD')}
                           </span>
                           <span className="font-mono tabular-nums text-[11px] text-slate-300 block">
                             Gs. {formatCurrencyGs(metrics.cifGs)}
@@ -1723,6 +2025,16 @@ export default function App() {
                   onRemoveItem={(id) => handleRemoveRow('internalServices', id)}
                 />
 
+                {/* 04. DETALLE DE MONTOS RECIBIDOS */}
+                <ReceivedPaymentsTable
+                  sectionIndex="04"
+                  items={settlement.receivedPayments || []}
+                  onAddItem={handleAddPaymentRow}
+                  onUpdateItem={handleUpdatePaymentRow}
+                  onRemoveItem={handleRemovePaymentRow}
+                  onMarkFullPaid={handleMarkFullPaid}
+                />
+
                 {/* Monto en Letras y Observación Section */}
                 <section className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
                   <div>
@@ -1827,6 +2139,15 @@ export default function App() {
                           Gs. {formatCurrencyGs(metrics.totalServicesGs)}
                         </span>
                       </div>
+                      <div className="flex justify-between text-slate-700 pt-1.5 border-t border-slate-100 font-medium">
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                          <span>04. Montos Recibidos (Total):</span>
+                        </span>
+                        <span className="font-mono tabular-nums font-bold text-emerald-800">
+                          Gs. {formatCurrencyGs(metrics.amountReceivedGs)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Total General */}
@@ -1847,54 +2168,53 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Monto Recibido Input */}
+                    {/* Monto Recibido / Anticipo del Cliente (Gs.) — Suma de 04. DETALLE DE MONTOS RECIBIDOS */}
                     <div className="pt-1">
-                      <label
-                        htmlFor="amount-received-input"
-                        className="block text-xs font-bold text-slate-700 mb-1.5"
-                      >
-                        Monto Recibido / Anticipo del Cliente (Gs.)
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label
+                          htmlFor="amount-received-input"
+                          className="text-xs font-bold text-slate-700"
+                        >
+                          Monto Recibido / Anticipo del Cliente (Gs.)
+                        </label>
+                        <span className="text-[10.5px] text-slate-500 font-medium">
+                          {(settlement.receivedPayments || []).length} pago(s) en 04
+                        </span>
+                      </div>
                       <div className="relative flex items-center">
-                        <span className="absolute left-3 text-xs font-mono text-slate-500 pointer-events-none">
+                        <span className="absolute left-3 text-xs font-mono font-bold text-emerald-700 pointer-events-none">
                           Gs.
                         </span>
                         <input
                           id="amount-received-input"
-                          type="number"
-                          step="100000"
-                          min="0"
-                          value={
-                            settlement.amountReceived === 0
-                              ? ''
-                              : settlement.amountReceived
-                          }
-                          onChange={(e) =>
-                            updateField(
-                              'amountReceived',
-                              e.target.value === ''
-                                ? 0
-                                : Number(e.target.value)
-                            )
-                          }
-                          placeholder="0"
-                          className="w-full pl-10 pr-3 py-2.5 text-sm font-mono tabular-nums font-bold text-emerald-800 bg-emerald-50/60 border border-emerald-300 rounded-md focus:bg-white focus:border-emerald-600 focus:outline-none"
+                          type="text"
+                          readOnly
+                          value={formatCurrencyGs(metrics.amountReceivedGs)}
+                          className="w-full pl-10 pr-3 py-2.5 text-sm font-mono tabular-nums font-bold text-emerald-900 bg-emerald-50/80 border border-emerald-300 rounded-md focus:bg-white focus:border-emerald-600 focus:outline-none cursor-default shadow-xs"
+                          title="Suma automática de todos los pagos registrados en la sección 04"
                         />
                       </div>
                       <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-500">
                         <button
                           type="button"
-                          onClick={() =>
-                            updateField('amountReceived', metrics.grandTotalGs)
-                          }
-                          className="text-blue-600 hover:underline font-medium cursor-pointer"
+                          onClick={handleMarkFullPaid}
+                          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                          title="Registra un pago para cubrir el 100% del saldo y dejar la liquidación en 0 Gs."
                         >
-                          Marcar 100% cancelado
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Marcar 100% cancelado</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateField('amountReceived', 0)}
-                          className="text-slate-500 hover:underline cursor-pointer"
+                          onClick={() => {
+                            setSettlement((prev) => ({
+                              ...prev,
+                              receivedPayments: [],
+                              amountReceived: 0,
+                            }));
+                            showNotice('Montos recibidos restablecidos a Gs. 0');
+                          }}
+                          className="text-slate-500 hover:text-slate-700 hover:underline cursor-pointer"
                         >
                           Sin anticipo (Gs. 0)
                         </button>
@@ -2086,11 +2406,20 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-end gap-2 mt-2 pt-1.5 border-t border-slate-100">
+                              <div className="flex items-center justify-end gap-1.5 mt-2 pt-1.5 border-t border-slate-100">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewSettlement(item)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                                  title="Vista previa del documento antes de descargar"
+                                >
+                                  <Eye className="w-3 h-3 text-blue-600" />
+                                  <span>Previa</span>
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleLoadSettlement(item)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
                                 >
                                   <FolderOpen className="w-3 h-3" />
                                   <span>Cargar</span>
@@ -2143,6 +2472,16 @@ export default function App() {
                 showNotice(`Archivo PDF descargado: ${fileName}`);
               }}
               onMarkAsSent={() => handleSaveToHistory('Enviada', true)}
+            />
+          )}
+
+          {/* VIEW: DASHBOARD DE DATA VISUALIZATION Y GESTIÓN DE SALDOS */}
+          {activeView === 'dashboard' && (
+            <DashboardSettlements
+              companySettings={company}
+              historySettlements={history}
+              currentSettlement={settlement}
+              onGoToEditor={() => setActiveView('liquidacion')}
             />
           )}
 
@@ -2211,7 +2550,7 @@ export default function App() {
                       <th className="py-3 px-4">Cliente / RUC</th>
                       <th className="py-3 px-4">Remitente / Transporte</th>
                       <th className="py-3 px-4">Despacho / Factura</th>
-                      <th className="py-3 px-4 text-right">Valor CIF (USD)</th>
+                      <th className="py-3 px-4 text-right">Valor CIF</th>
                       <th className="py-3 px-4 text-right">
                         Total General (Gs.)
                       </th>
@@ -2249,19 +2588,25 @@ export default function App() {
                               {item.senderName}
                             </div>
                             <div className="text-[11px] text-slate-500">
-                              {item.senderCountry} · {item.transportMode}
+                              {item.originCountry || item.senderCountry}{item.provenanceCountry && item.provenanceCountry !== item.originCountry ? ` (vía ${item.provenanceCountry})` : ''} · {item.transportMode}
                             </div>
                           </td>
                           <td className="py-3 px-4 align-middle font-mono tabular-nums">
-                            <div className="text-slate-900">
-                              {item.dispatchNumber}
+                            <div className="text-slate-900 font-medium flex items-center gap-1.5">
+                              <span>{item.dispatchNumber}</span>
+                              <span className="text-[10px] px-1 py-0.2 bg-slate-100 text-slate-700 rounded border border-slate-300">
+                                {item.customsRegime || 'IC04'}
+                              </span>
+                              <span className="text-[10px] px-1 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
+                                {item.incoterm || 'FOB'}
+                              </span>
                             </div>
                             <div className="text-[11px] text-slate-500">
                               Fact: {item.invoiceNumber}
                             </div>
                           </td>
                           <td className="py-3 px-4 align-middle text-right font-mono tabular-nums font-medium text-slate-800">
-                            USD {formatCurrencyUsd(m.cifUsd)}
+                            {item.currency || 'USD'} {formatCurrencyAmount(m.cifAmount, item.currency || 'USD')}
                           </td>
                           <td className="py-3 px-4 align-middle text-right font-mono tabular-nums font-bold text-slate-900">
                             Gs. {formatCurrencyGs(m.grandTotalGs)}
@@ -2276,6 +2621,15 @@ export default function App() {
                           </td>
                           <td className="py-3 px-4 align-middle text-right">
                             <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewSettlement(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors cursor-pointer"
+                                title="Vista previa del documento oficial antes de descargar"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Vista previa</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleLoadSettlement(item)}
@@ -2612,6 +2966,123 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {/* MODAL DE VISTA PREVIA RÁPIDA (CON ÍCONO DE OJO) ANTES DE DESCARGAR */}
+      {previewSettlement && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-xs"
+          onClick={() => setPreviewSettlement(null)}
+        >
+          <div
+            className="relative w-full max-w-5xl bg-slate-100 border border-slate-300 rounded-xl shadow-2xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header (Fijo arriba) */}
+            <div className="flex items-center justify-between px-3 sm:px-6 py-3 bg-slate-900 text-white shrink-0 border-b border-slate-800 z-10 shadow-sm">
+              <div className="flex items-center gap-2.5 truncate">
+                <div className="p-1.5 bg-sky-500/20 text-sky-400 rounded-md border border-sky-400/30 shrink-0">
+                  <Eye className="w-4 h-4" />
+                </div>
+                <div className="truncate">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-white truncate">
+                      Vista Previa — Liquidación Nº {previewSettlement.sequentialNumber}
+                    </h3>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 text-slate-200 rounded border border-slate-700 font-mono shrink-0">
+                      {previewSettlement.status}
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] sm:text-[11px] text-slate-300 truncate">
+                    {previewSettlement.clientName} · Despacho: {previewSettlement.dispatchNumber || 'S/N'} · Fecha: {previewSettlement.date}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fileName = exportSettlementToPdf(previewSettlement, company);
+                    showNotice(`PDF descargado exitosamente: ${fileName}`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors cursor-pointer shadow-xs"
+                  title="Descargar esta liquidación en formato PDF de 1 sola hoja"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Descargar PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleLoadSettlement(previewSettlement);
+                    setPreviewSettlement(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
+                  title="Cargar esta liquidación en el editor para realizar modificaciones"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Editar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettlement(previewSettlement);
+                    setActiveView('documento');
+                    setPreviewSettlement(null);
+                  }}
+                  className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
+                  title="Abrir en pantalla completa de Vista Factura"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Pantalla Completa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewSettlement(null)}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors cursor-pointer ml-1"
+                  title="Cerrar vista previa (Escape)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: ÁREA CON SCROLL SUAVE ACTIVO Y COMPLETO */}
+            <div
+              tabIndex={0}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 sm:p-5 bg-slate-200/90 focus:outline-none"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="max-w-[210mm] mx-auto pb-14 sm:pb-20">
+                <div className="bg-white rounded-md shadow-xl border border-slate-300 overflow-hidden">
+                  <PrintInvoiceDocument
+                    settlement={previewSettlement}
+                    company={company}
+                    isStandaloneView={false}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer: barra informativa con acceso rápido */}
+            <div className="shrink-0 px-4 py-2 bg-slate-100 border-t border-slate-300 text-[11px] text-slate-600 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                <span>Desplaza con la rueda del mouse, trackpad o arrastra para revisar todo el documento</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewSettlement(null)}
+                className="font-medium text-slate-700 hover:text-slate-950 underline cursor-pointer"
+              >
+                Cerrar vista previa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

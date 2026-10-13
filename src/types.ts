@@ -29,6 +29,14 @@ export interface LineItem {
   taxable: boolean;
 }
 
+export interface ReceivedPaymentItem {
+  id: string;
+  method?: 'Transferencia' | 'Efectivo'; // Método de Pago: Transferencia bancaria o Efectivo en caja
+  description: string; // Detalle: Si es Transferencia -> Banco y N° de transacción; Si es Efectivo -> N° de Recibo de Caja
+  date: string; // Fecha (despliega calendario YYYY-MM-DD)
+  amountGs: number; // Valor (Gs.)
+}
+
 export interface CustomsSettlement {
   id: string;
   sequentialNumber: string; // ej. "001/2026"
@@ -43,22 +51,32 @@ export interface CustomsSettlement {
 
   // Columna 2: Despacho & Remitente
   senderName: string;
-  senderCountry: string;
+  senderCountry: string; // compatibilidad
+  originCountry?: string; // País de Origen (donde se fabricó/produjo)
+  provenanceCountry?: string; // País de Procedencia (desde donde se embarcó)
   senderReference: string;
   transportMode: 'Marítimo' | 'Aéreo' | 'Terrestre' | 'Multimodal';
-  customsOffice: string;
+  customsOffice: string; // Administración Aduanera / Predio (ej. "021 - Zona Franca Global")
+  customsCode?: string; // Cód. SOFIA (ej. "021")
+  customsRegime?: string; // Cód. Régimen (ej. "IC04")
+  incoterm?: string; // Término de Comercio Internacional (ej. "FOB")
 
   // Columna 3: Datos Liquidación
   invoiceNumber: string; // Nro Factura
+  supplierName?: string; // Proveedor / Exportador
   dispatchNumber: string; // Despacho
   proformaNumber: string; // Nro Proforma
-  exchangeRate: number; // Cotización Dólar
+  exchangeRate: number; // Cotización
 
-  // Columna 4: Contenido (Valores en USD)
-  fobUsd: number; // Valor FOB
+  // Columna 4: Contenido y Base Imponible
+  currency?: string; // Moneda (USD, EUR, BRL, PYG, etc.)
+  saleCondition?: string; // Condición de venta (FOB, CIF, CFR, FCA, EXW, etc.)
+  fobUsd: number; // Valor FC (Factura Comercial) / FOB
+  fcUsd?: number; // Valor FC (Factura Comercial)
   insuranceUsd: number; // Seguro
   freightUsd: number; // Flete
   adjustmentUsd?: number; // Valor Ajust a incluir
+  deductionUsd?: number; // Ajuste a deducir
 
   // Sección Mercadería: Liquidación de Derechos y Gastos Sobre Mercadería a ser Transportada (6 columnas)
   merchandiseItems: MerchandiseItem[];
@@ -68,8 +86,11 @@ export interface CustomsSettlement {
   ratesAndCosts: LineItem[]; // DETALLE DE TASAS Y OTROS COSTOS
   internalServices: LineItem[]; // DETALLE DE SERVICIOS INTERNOS
 
+  // 04. DETALLE DE MONTOS RECIBIDOS (Descripción | Fecha | Valor Gs.)
+  receivedPayments?: ReceivedPaymentItem[];
+
   // Liquidación Financiera
-  amountReceived: number; // Recibido
+  amountReceived: number; // Recibido (suma de montos recibidos)
   amountInWords?: string; // Monto en Letras (se autocalcula si está vacío, o editable)
   notes: string; // Observación (ej. Observación a Favor de PETRA 626.882.- ...)
   createdAt: string;
