@@ -57,8 +57,9 @@ import {
   CountrySelect,
 } from './components/CustomsCatalogSelectors';
 import { DashboardSettlements } from './components/DashboardSettlements';
+import { ProformaTab } from './components/ProformaTab';
 
-type ActiveView = 'liquidacion' | 'documento' | 'dashboard' | 'historial' | 'empresa';
+type ActiveView = 'liquidacion' | 'proforma' | 'documento' | 'dashboard' | 'historial' | 'empresa';
 
 const STORAGE_KEYS = {
   COMPANY: 'meridian_customs_company_v4',
@@ -788,8 +789,8 @@ export default function App() {
           {company.name.split(' ')[0]} Aduanas & Logística
         </a>
 
-        {/* Zone 2: 5 concise single-line text navigation links */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300 shrink-0">
+        {/* Zone 2: Navigation links */}
+        <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-300 shrink-0">
           <button
             type="button"
             onClick={() => setActiveView('liquidacion')}
@@ -800,6 +801,17 @@ export default function App() {
             }`}
           >
             Liquidación
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView('proforma')}
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer border-b-2 ${
+              activeView === 'proforma'
+                ? 'text-white border-emerald-400 font-semibold'
+                : 'border-transparent hover:text-white hover:border-slate-600'
+            }`}
+          >
+            Vista PROFORMA
           </button>
           <button
             type="button"
@@ -862,15 +874,15 @@ export default function App() {
         </div>
       </header>
 
-      {/* Mobile Navigation Tabs (5 equal-width columns, zero horizontal scroll) */}
+      {/* Mobile Navigation Tabs (6 equal-width columns, zero horizontal scroll) */}
       <nav
         aria-label="Navegación móvil"
-        className="no-print md:hidden grid grid-cols-5 gap-1 bg-slate-800 text-slate-200 px-2 py-1.5 border-b border-slate-700 w-full"
+        className="no-print md:hidden grid grid-cols-6 gap-0.5 bg-slate-800 text-slate-200 px-1.5 py-1.5 border-b border-slate-700 w-full"
       >
         <button
           type="button"
           onClick={() => setActiveView('liquidacion')}
-          className={`py-2 px-1 text-[11px] font-semibold text-center rounded transition-colors truncate ${
+          className={`py-2 px-0.5 text-[10.5px] font-semibold text-center rounded transition-colors truncate ${
             activeView === 'liquidacion'
               ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-300 hover:text-white'
@@ -880,8 +892,19 @@ export default function App() {
         </button>
         <button
           type="button"
+          onClick={() => setActiveView('proforma')}
+          className={`py-2 px-0.5 text-[10.5px] font-semibold text-center rounded transition-colors truncate ${
+            activeView === 'proforma'
+              ? 'bg-slate-900 text-emerald-400 shadow-xs'
+              : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Proforma
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveView('documento')}
-          className={`py-2 px-1 text-[11px] font-semibold text-center rounded transition-colors truncate ${
+          className={`py-2 px-0.5 text-[10.5px] font-semibold text-center rounded transition-colors truncate ${
             activeView === 'documento'
               ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-300 hover:text-white'
@@ -892,7 +915,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveView('dashboard')}
-          className={`py-2 px-1 text-[11px] font-semibold text-center rounded transition-colors truncate ${
+          className={`py-2 px-0.5 text-[10.5px] font-semibold text-center rounded transition-colors truncate ${
             activeView === 'dashboard'
               ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-300 hover:text-white'
@@ -903,7 +926,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveView('historial')}
-          className={`py-2 px-1 text-[11px] font-semibold text-center rounded transition-colors truncate ${
+          className={`py-2 px-0.5 text-[10.5px] font-semibold text-center rounded transition-colors truncate ${
             activeView === 'historial'
               ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-300 hover:text-white'
@@ -914,7 +937,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveView('empresa')}
-          className={`py-2 px-1 text-[11px] font-semibold text-center rounded transition-colors truncate ${
+          className={`py-2 px-0.5 text-[10.5px] font-semibold text-center rounded transition-colors truncate ${
             activeView === 'empresa'
               ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-300 hover:text-white'
@@ -936,12 +959,22 @@ export default function App() {
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Print-only view when user triggers browser print from any tab */}
         <div className="hidden print-only">
-          <PrintInvoiceDocument
-            settlement={settlement}
-            company={company}
-            onExportStandaloneHtml={handleExportStandaloneHtml}
-            onExportPdfFile={handleExportPdfAndPreview}
-          />
+          {activeView === 'proforma' ? (
+            <ProformaTab
+              settlement={settlement}
+              company={company}
+              onUpdateSettlement={(updated) => setSettlement(updated)}
+              onGoToEditor={() => setActiveView('liquidacion')}
+              onShowNotice={showNotice}
+            />
+          ) : (
+            <PrintInvoiceDocument
+              settlement={settlement}
+              company={company}
+              onExportStandaloneHtml={handleExportStandaloneHtml}
+              onExportPdfFile={handleExportPdfAndPreview}
+            />
+          )}
         </div>
 
         {/* Screen Interactive Views */}
@@ -2460,6 +2493,17 @@ export default function App() {
                 </section>
               </div>
             </div>
+          )}
+
+          {/* VIEW: VISTA PROFORMA (RESUMIDA, FORMAL, 3 BLOQUES, AHORRO DE TINTA) */}
+          {activeView === 'proforma' && (
+            <ProformaTab
+              settlement={settlement}
+              company={company}
+              onUpdateSettlement={(updated) => setSettlement(updated)}
+              onGoToEditor={() => setActiveView('liquidacion')}
+              onShowNotice={showNotice}
+            />
           )}
 
           {/* VIEW 2: VISTA DE FACTURA / DOCUMENTO OFICIAL PARA IMPRIMIR O EXPORTAR PDF */}

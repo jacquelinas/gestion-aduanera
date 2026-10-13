@@ -562,23 +562,20 @@ export function exportProformaPdf(
       ? company.logoUrl
       : renderCorporateLogoPngDataUrl(company.logoText, company.name);
 
-  const borderGray: [number, number, number] = [100, 116, 139];
-  const headerFill: [number, number, number] = [241, 245, 249];
-  const subHeaderFill: [number, number, number] = [248, 250, 252];
-  const blackText: [number, number, number] = [15, 23, 42];
+  const companyName = company.name || 'LG ESTUDIO ADUANERO';
+  const slogan = company.slogan || 'Soluciones Integrales en Gestión y Logística Aduanera';
+  const address = company.address || 'Asunción, Paraguay';
+  const phone = '+595 981 412 775';
 
-  // 1. CABECERA: LOGO SUPERIOR IZQUIERDA Y DATOS EMPRESA A LA DERECHA (INCLUYENDO +595981412775)
+  const borderDark: [number, number, number] = [60, 60, 60];
+  const blackText: [number, number, number] = [0, 0, 0];
+
+  // 1. CABECERA: LOGO SUPERIOR IZQUIERDA Y DATOS EMPRESA A LA DERECHA (ALINEADO A LA DERECHA)
   const companyRightText = [
-    company.name,
-    `RUC: ${company.ruc}  ·  Tel: +595981412775 / +595 981 593 088`,
-    `Email: ${company.email}  ·  Asunción — Paraguay`,
-    company.slogan,
-  ].join('\n');
-
-  const proformaDocText = [
-    'PROFORMA DE DESPACHO ADUANERO',
-    `REF: ${ref}`,
-    `Fecha: ${settlement.date}`,
+    companyName.toUpperCase(),
+    `"${slogan}"`,
+    `${address}  ·  Tel: ${phone}`,
+    `PROFORMA DE DESPACHO ADUANERO  ·  REF: ${ref}  ·  Fecha: ${settlement.date}`,
   ].join('\n');
 
   autoTable(doc, {
@@ -587,20 +584,19 @@ export function exportProformaPdf(
     pageBreak: 'avoid',
     theme: 'grid',
     styles: {
-      fillColor: [255, 255, 255],
+      fillColor: false,
       textColor: blackText,
-      lineColor: borderGray,
+      lineColor: borderDark,
       lineWidth: 0.25,
       cellPadding: 2,
       valign: 'middle',
       minCellHeight: 18,
     },
     columnStyles: {
-      0: { cellWidth: 34, halign: 'center', valign: 'middle' },
-      1: { cellWidth: 104, halign: 'left', fontSize: 7, fontStyle: 'bold', textColor: blackText },
-      2: { cellWidth: 56, halign: 'right', fontSize: 7.5, fontStyle: 'bold', fillColor: headerFill, textColor: blackText },
+      0: { cellWidth: 36, halign: 'center', valign: 'middle' },
+      1: { cellWidth: 158, halign: 'right', fontSize: 7.2, fontStyle: 'bold', textColor: blackText },
     },
-    body: [['', companyRightText, proformaDocText]],
+    body: [['', companyRightText]],
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 0 && logoPngDataUrl) {
         try {
@@ -624,61 +620,7 @@ export function exportProformaPdf(
 
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 1.8;
 
-  // 2. CABECERA DE DATOS DEL DESPACHO / OPERACIÓN
-  const colA = [
-    `REF: ${ref}`,
-    `FACTURA N°: ${settlement.invoiceNumber || '—'}`,
-    `PROVEEDOR: ${settlement.supplierName || settlement.senderName || settlement.clientName || '—'}`,
-    `ADUANA: ${settlement.customsOffice || '021 - ZONA FRANCA GLOBAL'}`,
-  ].join('\n');
-
-  const colB = [
-    `PAÍS ORIGEN: ${(settlement.originCountry || settlement.senderCountry || 'PARAGUAY').toUpperCase()}`,
-    `RÉGIMEN: ${settlement.customsRegime || 'IC04'}`,
-    `INCOTERM: ${settlement.incoterm || settlement.saleCondition || 'FOB'}`,
-    `VÍA / DOC: ${settlement.transportMode || 'Terrestre'} · ${settlement.dispatchNumber || '—'}`,
-  ].join('\n');
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    pageBreak: 'avoid',
-    theme: 'grid',
-    styles: {
-      fontSize: 6.8,
-      cellPadding: 1.8,
-      textColor: blackText,
-      lineColor: borderGray,
-      lineWidth: 0.25,
-      fillColor: [255, 255, 255],
-    },
-    columnStyles: {
-      0: { cellWidth: 97, fontStyle: 'bold' },
-      1: { cellWidth: 97, fontStyle: 'bold' },
-    },
-    body: [[colA, colB]],
-  });
-
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 1.5;
-
-  // 3. ENCABEZADO EXPLICATIVO
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    pageBreak: 'avoid',
-    theme: 'plain',
-    styles: {
-      fontSize: 6.6,
-      fontStyle: 'bold',
-      textColor: blackText,
-      cellPadding: 0.8,
-    },
-    body: [['PAGO DE TASAS DE SERVICIOS, HONORARIOS PROFESIONALES Y TRIBUTOS ADUANEROS SEGÚN DETALLE:']],
-  });
-
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 1.0;
-
-  // 4. TABLA DE GASTOS Y 13 RUBROS CON LAS 3 SECCIONES (01, 02, 03)
+  // 2. TABLA DE GASTOS Y 13 RUBROS LIMPIA
   const allDuties = settlement.customsDuties || [];
   const allRates = settlement.ratesAndCosts || [];
   const allServices = settlement.internalServices || [];
@@ -729,56 +671,55 @@ export function exportProformaPdf(
   const subtotal02 = vTasasPort + vSofia + vDinavisa + vCanonAnnp;
   const subtotal03 = vFlete + vGastosDesp + vHonorarios;
   const grandTotal = subtotal01 + subtotal02 + subtotal03;
+  const clientDisplayName = (
+    settlement.clientName
+      ? settlement.clientName.split('—')[0].split('(')[0].trim()
+      : 'CLIENTE'
+  ) || 'CLIENTE';
+
+  const montoRecibido =
+    settlement.amountReceived ||
+    (settlement.receivedPayments?.reduce((sum, p) => sum + (p.amountGs || 0), 0) ?? 0);
+  const montoFavor = montoRecibido - grandTotal;
 
   const tableBody: any[][] = [
-    // 01
-    ['01. DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS', 'SUBTOTAL GS.'],
-    ['  1. IMPUESTO AL VALOR AGREGADO (I.V.A.)', formatCurrencyGs(vIva)],
-    ['  2. SERVICIO DE VALORACION ADUANERA.', formatCurrencyGs(vValoracion)],
-    ['  3. INDI', formatCurrencyGs(vIndi)],
-    ['  4. DERECHOS ADUANEROS', formatCurrencyGs(vDerechos)],
-    ['  5. IRE GENERAL 700', formatCurrencyGs(vIre)],
-    ['  6. TASA INTERVENCION ADUANERA', formatCurrencyGs(vInterv)],
-    ['SUBTOTAL 01. TRIBUTOS ADUANEROS', formatCurrencyGs(subtotal01)],
-
-    // 02
-    ['02. DETALLE DE TASAS Y OTROS COSTOS', 'SUBTOTAL GS.'],
-    ['  7. TASAS PORTUARIAS APROX.', formatCurrencyGs(vTasasPort)],
-    ['  8. SISTEMA INFORMATICO SOFIA.', formatCurrencyGs(vSofia)],
-    ['  9. DINAVISA', formatCurrencyGs(vDinavisa)],
-    ['  10. CANON INFORMATICO Y TASAS OPERATIVAS (ANNP)', formatCurrencyGs(vCanonAnnp)],
-    ['SUBTOTAL 02. TASAS Y OTROS COSTOS', formatCurrencyGs(subtotal02)],
-
-    // 03
-    ['03. DETALLE DE SERVICIOS INTERNOS', 'SUBTOTAL GS.'],
-    ['  11. FLETE INTERNO Y ESTIBADORES', formatCurrencyGs(vFlete)],
-    ['  12. GASTOS DESPACHO - FOTOCOPIAS.', formatCurrencyGs(vGastosDesp)],
-    ['  13. HONORARIOS DESPACHANTE (IVA INCLUIDO)', formatCurrencyGs(vHonorarios)],
-    ['SUBTOTAL 03. SERVICIOS INTERNOS', formatCurrencyGs(subtotal03)],
-
-    // TOTAL GENERAL
-    ['TOTAL GENERAL (PYG)', formatCurrencyGs(grandTotal)],
+    ['1. IMPUESTO AL VALOR AGREGADO (I.V.A.)', formatCurrencyGs(vIva)],
+    ['2. SERVICIO DE VALORACION ADUANERA.', formatCurrencyGs(vValoracion)],
+    ['3. INDI', formatCurrencyGs(vIndi)],
+    ['4. DERECHOS ADUANEROS', formatCurrencyGs(vDerechos)],
+    ['5. IRE GENERAL 700', formatCurrencyGs(vIre)],
+    ['6. TASA INTERVENCION ADUANERA', formatCurrencyGs(vInterv)],
+    ['7. TASAS PORTUARIAS APROX.', formatCurrencyGs(vTasasPort)],
+    ['8. SISTEMA INFORMATICO SOFIA.', formatCurrencyGs(vSofia)],
+    ['9. DINAVISA', formatCurrencyGs(vDinavisa)],
+    ['10. CANON INFORMATICO Y TASAS OPERATIVAS (ANNP)', formatCurrencyGs(vCanonAnnp)],
+    ['11. FLETE INTERNO Y ESTIBADORES', formatCurrencyGs(vFlete)],
+    ['12. GASTOS DESPACHO - FOTOCOPIAS.', formatCurrencyGs(vGastosDesp)],
+    ['13. HONORARIOS DESPACHANTE (IVA INCLUIDO)', formatCurrencyGs(vHonorarios)],
+    // Filas finales de liquidación (TOTAL DESPACHO / RECIBIDO / FAVOR)
+    ['TOTAL DESPACHO:', formatCurrencyGs(grandTotal)],
+    [`RECIBIDO ${clientDisplayName.toUpperCase()}:`, formatCurrencyGs(montoRecibido)],
+    [`FAVOR ${clientDisplayName.toUpperCase()}:`, formatCurrencyGs(montoFavor)],
   ];
 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     pageBreak: 'avoid',
-    theme: 'grid',
+    theme: 'plain',
     styles: {
       fontSize: 6.2,
-      cellPadding: 1.1,
+      cellPadding: 0.9,
       textColor: blackText,
-      lineColor: borderGray,
-      lineWidth: 0.2,
+      fillColor: false,
     },
     columnStyles: {
       0: { cellWidth: 148, halign: 'left' },
       1: { cellWidth: 46, halign: 'right', fontStyle: 'bold' },
     },
-    head: [['CONCEPTO / RUBRO ADUANERO (01, 02 Y 03)', 'MONTO (PYG)']],
+    head: [['CONCEPTO / RUBRO ADUANERO', 'MONTO (PYG)']],
     headStyles: {
-      fillColor: headerFill,
+      fillColor: false,
       textColor: blackText,
       fontSize: 6.5,
       fontStyle: 'bold',
@@ -787,37 +728,74 @@ export function exportProformaPdf(
     body: tableBody,
     didParseCell: (data) => {
       if (data.section === 'body') {
-        const rowText = String(data.row.raw[0] || '');
-        if (rowText.startsWith('01.') || rowText.startsWith('02.') || rowText.startsWith('03.')) {
+        data.cell.styles.fillColor = false;
+        const rawRow = data.row.raw as Record<string | number, unknown> | undefined;
+        const rowText = String(rawRow?.[0] || '');
+        if (
+          rowText.startsWith('TOTAL DESPACHO:') ||
+          rowText.startsWith('RECIBIDO') ||
+          rowText.startsWith('FAVOR')
+        ) {
           data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = subHeaderFill;
-        } else if (rowText.startsWith('SUBTOTAL')) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [245, 247, 250];
-        } else if (rowText.startsWith('TOTAL GENERAL')) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fontSize = 7.4;
-          data.cell.styles.fillColor = headerFill;
+          data.cell.styles.fontSize = 7.0;
+          if (data.column.index === 0) {
+            data.cell.styles.halign = 'right';
+          }
         }
       }
     },
   });
 
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 1.8;
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 2.0;
 
-  // 5. NOTA DE APROBACIÓN POR VALORACIÓN ADUANERA Y SALUDO FORMAL
+  // 3. RESUMEN GENERAL DEL CLIENTE Y OPERACIÓN (ENTRE TABLA Y NOTA DE APROBACIÓN)
+  const colA = [
+    `CLIENTE: ${settlement.clientName || '—'}`,
+    `RUC CLIENTE: ${settlement.clientRuc || '—'}`,
+    `REF: ${ref}  ·  FECHA: ${settlement.date}`,
+    `FACTURA N°: ${settlement.invoiceNumber || '—'}`,
+    `PROVEEDOR: ${settlement.supplierName || settlement.senderName || '—'}`,
+  ].join('\n');
+
+  const colB = [
+    `ADUANA: ${settlement.customsOffice || '021 - ZONA FRANCA GLOBAL'}`,
+    `PAÍS ORIGEN: ${(settlement.originCountry || settlement.senderCountry || 'PARAGUAY').toUpperCase()}`,
+    `RÉGIMEN: ${settlement.customsRegime || 'IC04'}`,
+    `INCOTERM / VÍA: ${settlement.incoterm || settlement.saleCondition || 'FOB'} · ${settlement.transportMode || 'Terrestre'}`,
+    `COTIZACIÓN: 1 USD = ${formatCurrencyGs(settlement.exchangeRate || 7650)} Gs.`,
+  ].join('\n');
+
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     pageBreak: 'avoid',
-    theme: 'grid',
+    theme: 'plain',
+    styles: {
+      fontSize: 6.6,
+      cellPadding: 1.0,
+      textColor: blackText,
+      fillColor: false,
+    },
+    columnStyles: {
+      0: { cellWidth: 97, fontStyle: 'bold' },
+      1: { cellWidth: 97, fontStyle: 'bold' },
+    },
+    body: [[colA, colB]],
+  });
+
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 1.8;
+
+  // 5. NOTA DE APROBACIÓN POR VALORACIÓN ADUANERA Y SALUDO FORMAL (LIMPIA SIN RECUADRO)
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    pageBreak: 'avoid',
+    theme: 'plain',
     styles: {
       fontSize: 5.8,
-      cellPadding: 1.2,
+      cellPadding: 0.8,
       textColor: blackText,
-      lineColor: borderGray,
-      lineWidth: 0.2,
-      fillColor: [255, 255, 255],
+      fillColor: false,
     },
     columnStyles: {
       0: { cellWidth: 194 },
@@ -830,7 +808,12 @@ export function exportProformaPdf(
 
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3.0;
 
-  // 6. FIRMAS DE RESPONSABLES (2 COLUMNAS)
+  // 6. FIRMAS DE RESPONSABLES EDITABLES (2 COLUMNAS)
+  const signer1Name = settlement.signer1Name || company.signer1Name || 'Lic. Lucas Benítez';
+  const signer1Role = settlement.signer1Role || company.signer1Role || 'Despachante de Aduanas · Reg. DNA Nº 1.482';
+  const signer2Name = settlement.signer2Name || company.signer2Name || 'Dra. Gabriela Duarte';
+  const signer2Role = settlement.signer2Role || company.signer2Role || 'Depto. de Operaciones & Finanzas';
+
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
@@ -848,9 +831,9 @@ export function exportProformaPdf(
     },
     body: [
       ['________________________________________', '________________________________________'],
-      ['Lic. Lucas Benítez', 'Dra. Gabriela Duarte'],
-      ['Despachante de Aduanas · Reg. DNA Nº 1.482', 'Depto. de Operaciones & Finanzas'],
-      [company.name, company.name],
+      [signer1Name, signer2Name],
+      [signer1Role, signer2Role],
+      [companyName, companyName],
     ],
   });
 

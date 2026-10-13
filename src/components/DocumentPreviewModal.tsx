@@ -152,16 +152,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               <span>Descargar PDF</span>
             </button>
 
-            {/* [Descargar Excel (.xlsx)] */}
-            <button
-              type="button"
-              onClick={handleDownloadExcel}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-600 rounded-md transition-colors cursor-pointer shadow-xs"
-              title="Dispara la descarga inmediata del archivo de Excel estructurado (.xlsx)"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
-              <span>Descargar Excel (.xlsx)</span>
-            </button>
+
 
             <button
               type="button"

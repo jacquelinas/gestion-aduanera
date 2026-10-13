@@ -180,64 +180,55 @@ export function exportToExcel(
   // Fila 36: Cargos de firmantes
   // Fila 37: Entidades de firmantes
 
-  const startRubroRow = 14;
-  const endRubroRow = startRubroRow + finalItems.length - 1; // 26 para 13 rubros
+  const startRubroRow = 16;
+  const endRubroRow = startRubroRow + finalItems.length - 1; // 28 para 13 rubros
 
   const aoaData: any[][] = [
     // Fila 1
     [title, ''],
     // Fila 2
-    ['DOCUMENTO OFICIAL DE ESTIMACIÓN ADUANERA Y TRIBUTARIA · TEL: +595981412775', ''],
+    ['Soluciones Integrales en Gestión y Logística Aduanera · Asunción, Paraguay · Tel: +595 981 412 775', ''],
     // Fila 3
+    ['REF: ' + ref, ''],
     ['', ''],
-    // Fila 4
-    ['REF:', ref],
-    // Fila 5
-    ['FACTURA N°:', facturaNo],
-    // Fila 6
-    ['PROVEEDOR:', proveedor],
-    // Fila 7
-    ['ADUANA:', aduana],
-    // Fila 8
-    ['PAÍS DE ORIGEN:', paisOrigen],
-    // Fila 9
-    ['RÉGIMEN:', regimen],
-    // Fila 10
-    ['', ''],
-    // Fila 11
-    [explanatoryNote, ''],
-    // Fila 12
-    ['', ''],
-    // Fila 13
     ['CONCEPTO / RUBRO ADUANERO', 'MONTO (PYG)'],
   ];
 
-  // Filas 14 a 26 (Rubros)
+  // Rubros
   finalItems.forEach((item) => {
     aoaData.push([item.concept, item.amount]);
   });
 
-  // Fila 27: Total con fórmula OpenXML SUM(B14:B26)
-  aoaData.push([
-    'TOTAL GENERAL (PYG)',
-    {
-      t: 'n',
-      f: `SUM(B${startRubroRow}:B${endRubroRow})`,
-      v: totalAmount,
-    },
-  ]);
+  // Filas finales de liquidación (TOTAL DESPACHO / RECIBIDO / FAVOR)
+  const clientDisplayName = (header.cliente || header.clientName || 'CLIENTE').split('—')[0].split('(')[0].trim() || 'CLIENTE';
+  const montoRecibido = Number(header.montoRecibido || header.amountReceived || 0);
+  const montoFavor = montoRecibido - totalAmount;
+
+  aoaData.push(['TOTAL DESPACHO:', totalAmount]);
+  aoaData.push([`RECIBIDO ${clientDisplayName.toUpperCase()}:`, montoRecibido]);
+  aoaData.push([`FAVOR ${clientDisplayName.toUpperCase()}:`, montoFavor]);
+
+  // Resumen de Datos del Cliente y Operación Aduanera (situado abajo de la tabla)
+  aoaData.push(['', '']);
+  aoaData.push(['CLIENTE:', header.cliente || header.clientName || '—']);
+  aoaData.push(['RUC CLIENTE:', header.rucCliente || header.clientRuc || '—']);
+  aoaData.push(['FACTURA N°:', facturaNo]);
+  aoaData.push(['PROVEEDOR:', proveedor]);
+  aoaData.push(['ADUANA:', aduana]);
+  aoaData.push(['PAÍS DE ORIGEN:', paisOrigen]);
+  aoaData.push(['RÉGIMEN:', regimen]);
 
   // Filas inferiores
-  aoaData.push(['', '']); // Fila 28
-  aoaData.push(['NOTA DE APROBACIÓN POR VALORACIÓN ADUANERA:', '']); // Fila 29
-  aoaData.push([customsNote, '']); // Fila 30
-  aoaData.push(['', '']); // Fila 31
-  aoaData.push([formalGreeting, '']); // Fila 32
-  aoaData.push(['', '']); // Fila 33
-  aoaData.push(['________________________________________', '________________________________________']); // Fila 34
-  aoaData.push([signer1.name, signer2.name]); // Fila 35
-  aoaData.push([signer1.role || '', signer2.role || '']); // Fila 36
-  aoaData.push([signer1.entity || '', signer2.entity || '']); // Fila 37
+  aoaData.push(['', '']);
+  aoaData.push(['NOTA DE APROBACIÓN POR VALORACIÓN ADUANERA:', '']);
+  aoaData.push([customsNote, '']);
+  aoaData.push(['', '']);
+  aoaData.push([formalGreeting, '']);
+  aoaData.push(['', '']);
+  aoaData.push(['________________________________________', '________________________________________']);
+  aoaData.push([signer1.name, signer2.name]);
+  aoaData.push([signer1.role || '', signer2.role || '']);
+  aoaData.push([signer1.entity || '', signer2.entity || '']);
 
   const ws = XLSX.utils.aoa_to_sheet(aoaData);
 
@@ -256,66 +247,9 @@ export function exportToExcel(
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // Título A1:B1
     { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } }, // Subtítulo A2:B2
-    { s: { r: 10, c: 0 }, e: { r: 10, c: 1 } }, // Encabezado explicativo A11:B11
-    { s: { r: 28, c: 0 }, e: { r: 28, c: 1 } }, // Título Nota A29:B29
-    { s: { r: 29, c: 0 }, e: { r: 29, c: 1 } }, // Texto Nota A30:B30
-    { s: { r: 31, c: 0 }, e: { r: 31, c: 1 } }, // Saludo A32:B32
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Proforma Despacho');
-
-  // ==========================================
-  // HOJA 2: DESGLOSE COMPLETO POR SECCIONES 01, 02 Y 03
-  // ==========================================
-  const s1Items = finalItems.slice(0, 6); // 1 a 6: Tributos
-  const s2Items = finalItems.filter((_, idx) => (idx >= 6 && idx <= 8) || idx === 12); // Tasas: 7, 8, 9, 13
-  const s3Items = finalItems.filter((_, idx) => idx >= 9 && idx <= 11); // Servicios Internos: 10, 11, 12
-
-  const s1Sum = s1Items.reduce((a, b) => a + b.amount, 0);
-  const s2Sum = s2Items.reduce((a, b) => a + b.amount, 0);
-  const s3Sum = s3Items.reduce((a, b) => a + b.amount, 0);
-
-  const breakdownData: any[][] = [
-    ['LG LOGÍSTICA ADUANERA - DESGLOSE DETALLADO DE RUBROS', ''],
-    ['DOCUMENTO DE ESTIMACIÓN ADUANERA Y TRIBUTARIA · TEL: +595981412775', ''],
-    ['', ''],
-    ['REF:', ref],
-    ['FACTURA N°:', facturaNo],
-    ['PROVEEDOR:', proveedor],
-    ['ADUANA:', aduana],
-    ['PAÍS ORIGEN:', paisOrigen],
-    ['RÉGIMEN:', regimen],
-    ['', ''],
-    ['01. DETALLE DE TRIBUTOS ADUANEROS Y SERVICIOS', 'MONTO (PYG)'],
-  ];
-
-  s1Items.forEach((it) => breakdownData.push([`  • ${it.concept}`, it.amount]));
-  breakdownData.push(['SUBTOTAL 01. TRIBUTOS ADUANEROS', s1Sum]);
-  breakdownData.push(['', '']);
-
-  breakdownData.push(['02. DETALLE DE TASAS Y OTROS COSTOS', 'MONTO (PYG)']);
-  s2Items.forEach((it) => breakdownData.push([`  • ${it.concept}`, it.amount]));
-  breakdownData.push(['SUBTOTAL 02. TASAS Y OTROS COSTOS', s2Sum]);
-  breakdownData.push(['', '']);
-
-  breakdownData.push(['03. DETALLE DE SERVICIOS INTERNOS', 'MONTO (PYG)']);
-  s3Items.forEach((it) => breakdownData.push([`  • ${it.concept}`, it.amount]));
-  breakdownData.push(['SUBTOTAL 03. SERVICIOS INTERNOS', s3Sum]);
-  breakdownData.push(['', '']);
-
-  breakdownData.push(['TOTAL GENERAL CONSOLIDADO (PYG)', totalAmount]);
-  breakdownData.push(['', '']);
-  breakdownData.push(['Firma Responsable 1:', signer1.name + ' (' + (signer1.role || '') + ')']);
-  breakdownData.push(['Firma Responsable 2:', signer2.name + ' (' + (signer2.role || '') + ')']);
-
-  const wsBreakdown = XLSX.utils.aoa_to_sheet(breakdownData);
-  wsBreakdown['!cols'] = [{ wch: 55 }, { wch: 25 }];
-  wsBreakdown['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 1 } },
-  ];
-
-  XLSX.utils.book_append_sheet(wb, wsBreakdown, 'Desglose Secciones 01-03');
 
   // Nombre del archivo: Proforma_LG_[REF].xlsx
   const cleanRef = String(ref).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
@@ -336,6 +270,8 @@ export function exportSettlementToExcel(
   company?: CompanySettings
 ): string {
   const header: ProformaHeader = {
+    cliente: settlement.clientName || '—',
+    rucCliente: settlement.clientRuc || '—',
     ref: settlement.proformaNumber || settlement.sequentialNumber || '001/2026',
     facturaNo: settlement.invoiceNumber || '—',
     proveedor: settlement.supplierName || settlement.senderName || settlement.clientName || '—',
@@ -480,16 +416,21 @@ export function exportSettlementToExcel(
       'Sin otro particular, aprovechamos la oportunidad para saludarle muy atentamente.',
   };
 
+  const signer1Name = settlement.signer1Name || company?.signer1Name || 'Lic. Lucas Benítez';
+  const signer1Role = settlement.signer1Role || company?.signer1Role || 'Despachante de Aduanas · Reg. DNA Nº 1.482';
+  const signer2Name = settlement.signer2Name || company?.signer2Name || 'Dra. Gabriela Duarte';
+  const signer2Role = settlement.signer2Role || company?.signer2Role || 'Depto. de Operaciones & Finanzas';
+
   const signatures: ProformaSignature[] = [
     {
-      name: 'Lic. Lucas Benítez',
-      role: 'Despachante de Aduanas · Reg. DNA Nº 1.482',
-      entity: company?.name || 'LG Logística Aduanera',
+      name: signer1Name,
+      role: signer1Role,
+      entity: company?.name || 'LG Estudio Aduanero',
     },
     {
-      name: 'Dra. Gabriela Duarte',
-      role: 'Depto. de Operaciones & Finanzas',
-      entity: company?.name || 'LG Logística Aduanera',
+      name: signer2Name,
+      role: signer2Role,
+      entity: company?.name || 'LG Estudio Aduanero',
     },
   ];
 

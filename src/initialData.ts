@@ -4,15 +4,15 @@ import { DEFAULT_CORPORATE_LOGO_DATA_URI } from './utils/logoRenderer';
 export { DEFAULT_CORPORATE_LOGO_DATA_URI };
 
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
-  name: 'LG ESTUDIO ADUANERO & LOGÍSTICA S.A.',
-  slogan: 'Despachos de Importación y Exportación · Logística Internacional',
+  name: 'LG ESTUDIO ADUANERO',
+  slogan: 'Soluciones Integrales en Gestión y Logística Aduanera',
   ruc: '80144425-0',
-  phone: '+595981412775 / +595 981 593 088',
+  phone: '+595 981 412 775',
   email: 'operaciones@logisticaaduanera.com.py',
-  address: 'Asunción — República del Paraguay',
+  address: 'Asunción, Paraguay',
   logoText: 'LG',
   logoUrl: DEFAULT_CORPORATE_LOGO_DATA_URI,
-  bankDetails: 'LG Estudio Aduanero & Logística S.A. · RUC: 80144425-0 · Cta. Cte. Gs. / USD',
+  bankDetails: 'LG Estudio Aduanero · RUC: 80144425-0 · Cta. Cte. Gs. / USD',
 };
 
 export const INITIAL_SETTLEMENT: CustomsSettlement = {

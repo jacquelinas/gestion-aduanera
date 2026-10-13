@@ -8,6 +8,10 @@ export interface CompanySettings {
   logoText: string;
   logoUrl?: string;
   bankDetails: string;
+  signer1Name?: string;
+  signer1Role?: string;
+  signer2Name?: string;
+  signer2Role?: string;
 }
 
 export interface MerchandiseItem {
@@ -93,5 +97,9 @@ export interface CustomsSettlement {
   amountReceived: number; // Recibido (suma de montos recibidos)
   amountInWords?: string; // Monto en Letras (se autocalcula si está vacío, o editable)
   notes: string; // Observación (ej. Observación a Favor de PETRA 626.882.- ...)
+  signer1Name?: string;
+  signer1Role?: string;
+  signer2Name?: string;
+  signer2Role?: string;
   createdAt: string;
 }
